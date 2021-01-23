@@ -203,6 +203,11 @@ eachfile:
 		}
 	}
 
+	// if there are no etextFilters, add a dummy one that passes everything
+	if len(r.etextFilters) == 0 {
+		r.AddETextFilter(func(*books.EText) bool { return true })
+	}
+
 	// Now go through the etexts and keep the ones that pass
 	// the filter AND that have a non-empty list of files.
 	etexts := make([]books.EText, 0)

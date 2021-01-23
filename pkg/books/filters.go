@@ -23,29 +23,18 @@ func LanguageFilter(languages ...string) ETextFilter {
 	}
 }
 
-// Convenience constants for content types
-const (
-	TextPlain      = "text/plain"
-	TextPlainUTF8  = "text/plain"
-	TextPlainLatin = `text/plain; charset="iso-8859-1"`
-	TextPlainASCII = `text/plain; charset="us-ascii"`
-	Mobi           = "application/x-mobipocket-ebook"
-	EPub           = "application/epub+zip"
-	Plucker        = "application/prs.plucker"
-	HTML           = "text/html"
-	Zip            = "application/zip"
-)
-
 // ContentFilter is a convenience function that returns a PGFileFilter which
 // returns true if the file is an exact match for any one of the specified content types.
 // Some files have two content types -- the base type, and Zip (if there is a zipped version
 // of the file).
 func ContentFilter(contentTypes ...string) PGFileFilter {
 	return func(f *PGFile) bool {
-		for _, ct := range contentTypes {
-			for _, format := range f.Formats {
-				if format == ct {
-					return true
+		for _, ctname := range contentTypes {
+			if ct, ok := ContentTypes[ctname]; ok {
+				for _, format := range f.Formats {
+					if format == ct {
+						return true
+					}
 				}
 			}
 		}

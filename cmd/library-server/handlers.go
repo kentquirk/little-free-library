@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -136,12 +137,17 @@ func (svc *service) bookQuery(c echo.Context) error {
 				constraints.ExcludeCombiner = books.And
 			case "limit", "lim":
 				n, _ := strconv.Atoi(v)
-				// TODO: read max limit from config
-				if n > 0 && n < 100 {
+				if n > 0 && n <= svc.Config.MaxLimit {
 					constraints.Limit = n
+				} else {
+					return echo.NewHTTPError(http.StatusBadRequest,
+						fmt.Sprintf("limit must be >0 and <=%d", svc.Config.MaxLimit))
 				}
 			case "page", "pg":
-				n, _ := strconv.Atoi(v)
+				n, err := strconv.Atoi(v)
+				if err != nil || n < 0 {
+					return echo.NewHTTPError(http.StatusBadRequest, "page must be numeric and >0")
+				}
 				constraints.Page = n
 			default:
 				constraint, exclude, err := books.ConstraintFromText(k, v)

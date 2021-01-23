@@ -20,10 +20,10 @@ import (
 type config struct {
 	CacheDir        string        `env:"CACHEDIR" default:"/var/www/.cache"`
 	Port            int           `env:"PORT" required:"true"`
+	MaxLimit        int           `env:"MAXLIMIT" default:"100"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" default:"5s"`
-	// Secret          []byte        `env:"SECRET" required:"true"`
-	// Peers    []string `env:"PEERS"` // you can use `delimiter` tag to specify separator, for example `delimiter:" "`
-	// ConnectionTimeout time.Duration `env:"TIMEOUT" default:"10s"`
+	Languages       []string      `env:"LANGUAGES" delimiter:"," default:"en"`
+	Formats         []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub"`
 }
 
 func setupMiddleware(e *echo.Echo) {
@@ -41,8 +41,8 @@ func load(svc *service) {
 		log.Fatal("couldn't load!")
 	}
 	r := rdf.NewLoader(f)
-	r.AddETextFilter(books.LanguageFilter("en"))
-	r.AddPGFileFilter(books.ContentFilter(books.TextPlain, books.TextPlainASCII, books.TextPlainLatin, books.Mobi))
+	r.AddETextFilter(books.LanguageFilter(svc.Config.Languages...))
+	r.AddPGFileFilter(books.ContentFilter(svc.Config.Formats...))
 	log.Printf("beginning book loading")
 	r.Load(svc.Books)
 	log.Printf("book loading complete")
