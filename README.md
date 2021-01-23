@@ -32,3 +32,5 @@ Provides a simple QR code generator API -- a GET request to a URL gets you a QR 
 [This file](rdfloader.go) contains the code to load an "RDF" file which is a specific format of XML that is used by Project Gutenberg.
 [The offline catalogs page](http://www.gutenberg.org/ebooks/offline_catalogs.html) requests that this format be the one used for fetching data for offline uses.
 
+# TODO
+* move data stuff to its own package

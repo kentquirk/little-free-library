@@ -1,4 +1,4 @@
-package main
+package books
 
 import (
 	"testing"
@@ -41,15 +41,6 @@ func testEText() []EText {
 			Created:  time.Date(1998, 1, 1, 0, 0, 0, 0, time.UTC),
 		},
 	}
-}
-
-func testBookData() map[string]EText {
-	bookdata := make(map[string]EText)
-	data := testEText()
-	for i := range data {
-		bookdata[data[i].ID] = data[i]
-	}
-	return bookdata
 }
 
 func TestConstraint_testCreator(t *testing.T) {

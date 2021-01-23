@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/codingconcepts/env"
+	"github.com/kentquirk/little-free-library/pkg/books"
+	"github.com/kentquirk/little-free-library/pkg/rdf"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
@@ -31,58 +33,50 @@ func setupMiddleware(e *echo.Echo) {
 	e.Use(middleware.Recover())
 }
 
-var bookData *BookData = new(BookData)
+var bookData *books.BookData = new(books.BookData)
 
-func load() {
+func load(svc *service) {
 	f, err := os.Open("./data/catalog.rdf")
 	if err != nil {
 		log.Fatal("couldn't load!")
 	}
-	rdf := NewRDFLoader(f)
-	rdf.AddETextFilter(LanguageFilter("en"))
-	rdf.AddPGFileFilter(ContentFilter(TextPlain, TextPlainASCII, TextPlainLatin, Mobi))
-	rdf.Load(bookData)
-}
-
-func setupRoutes(e *echo.Echo) {
-	// Routes
-	e.GET("/", err400)
-	e.GET("/doc", doc)
-	e.GET("/health", health)
-	e.GET("/books/query", bookData.bookQuery)
-	e.GET("/books/summary", bookData.bookSummary)
-	e.GET("/details/:id", bookDetails)
-	e.GET("/qr/:id", qrcodegen)
-	e.GET("/book/:id", bookByID)
+	r := rdf.NewLoader(f)
+	r.AddETextFilter(books.LanguageFilter("en"))
+	r.AddPGFileFilter(books.ContentFilter(books.TextPlain, books.TextPlainASCII, books.TextPlainLatin, books.Mobi))
+	log.Printf("beginning book loading")
+	r.Load(svc.Books)
+	log.Printf("book loading complete")
 }
 
 func main() {
+	svc := newService()
+
 	// Load config
-	cfg := config{}
-	if err := env.Set(&cfg); err != nil {
+	if err := env.Set(&(svc.Config)); err != nil {
 		log.Fatal(err)
 	}
 
 	// Echo instance
 	e := echo.New()
 	// TODO: put dircache in config
-	e.AutoTLSManager.Cache = autocert.DirCache(cfg.CacheDir)
+	e.AutoTLSManager.Cache = autocert.DirCache(svc.Config.CacheDir)
 
 	setupMiddleware(e)
-	setupRoutes(e)
+
+	svc.setupRoutes(e)
 
 	// If the port is the SSL port, then do a TLS setup, otherwise just do normal HTTP
 	startfunc := e.Start
-	if cfg.Port == 443 {
+	if svc.Config.Port == 443 {
 		startfunc = e.StartAutoTLS
 	}
 
 	// background-load the data
-	go load()
+	go load(svc)
 
 	// Start server
 	go func() {
-		if err := startfunc(fmt.Sprintf(":%d", cfg.Port)); err != nil {
+		if err := startfunc(fmt.Sprintf(":%d", svc.Config.Port)); err != nil {
 			e.Logger.Info("shutting down the server")
 		}
 	}()
@@ -93,7 +87,7 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), svc.Config.ShutdownTimeout)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {
 		e.Logger.Fatal(err)

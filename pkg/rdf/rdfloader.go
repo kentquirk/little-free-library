@@ -1,4 +1,4 @@
-package main
+package rdf
 
 import (
 	"bufio"
@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/kentquirk/little-free-library/pkg/books"
 )
 
 func extractCharDataToEndToken(d *xml.Decoder, start xml.StartElement) ([]string, error) {
@@ -73,8 +75,8 @@ type xmlEtext struct {
 const xmlDateFormat = "2006-01-02"
 
 // asEText generates an EText from an xmlEtext
-func (x *xmlEtext) asEText() EText {
-	et := EText{
+func (x *xmlEtext) asEText() books.EText {
+	et := books.EText{
 		ID:            x.ID,
 		Publisher:     x.Publisher,
 		Title:         x.Title,
@@ -85,7 +87,7 @@ func (x *xmlEtext) asEText() EText {
 		Subjects:      x.Subjects,
 		DownloadCount: x.Downloads,
 		Rights:        x.Rights.Resource,
-		Files:         make([]PGFile, 0),
+		Files:         make([]books.PGFile, 0),
 	}
 	et.Subjects = append(et.Subjects, x.Subject)
 	// TODO: log if this gets an error
@@ -103,8 +105,8 @@ type xmlFile struct {
 	} `xml:"isFormatOf"`
 }
 
-func (x *xmlFile) asFile() PGFile {
-	f := PGFile{
+func (x *xmlFile) asFile() books.PGFile {
+	f := books.PGFile{
 		Location:   x.About,
 		Formats:    x.Formats,
 		FileSize:   x.Extent,
@@ -123,17 +125,17 @@ type xmlRdf struct {
 	Files      []xmlFile  `xml:"file"`
 }
 
-// RDFLoader loads an RDF file given a reader to it
-type RDFLoader struct {
+// Loader loads an RDF file given a reader to it
+type Loader struct {
 	reader        *bufio.Reader
 	entityMap     map[string]string
-	etextFilters  []ETextFilter
-	pgFileFilters []PGFileFilter
+	etextFilters  []books.ETextFilter
+	pgFileFilters []books.PGFileFilter
 }
 
 const bufsize = 4096
 
-// NewRDFLoader constructs an RDF Loader from a reader. It preloads the entities from the reader.
+// NewLoader constructs an RDF Loader from a reader. It preloads the entities from the reader.
 // We have some invented XML entities that we need to fix on the way by.
 // These entities are defined in the beginning of the XML file, but it is difficult
 // to get that information through the XML library. So instead, we can
@@ -141,8 +143,8 @@ const bufsize = 4096
 // to find lines that look like this:
 // <!ENTITY pg  "Project Gutenberg">
 // we use this to populate an entity map that we pass to the decoder when we load.
-func NewRDFLoader(r io.Reader) *RDFLoader {
-	loader := &RDFLoader{
+func NewLoader(r io.Reader) *Loader {
+	loader := &Loader{
 		reader: bufio.NewReaderSize(r, bufsize),
 		entityMap: map[string]string{
 			"pg":  "Project Gutenberg",
@@ -161,19 +163,19 @@ func NewRDFLoader(r io.Reader) *RDFLoader {
 }
 
 // AddETextFilter adds an ETextFilter
-func (r *RDFLoader) AddETextFilter(f ETextFilter) {
+func (r *Loader) AddETextFilter(f books.ETextFilter) {
 	r.etextFilters = append(r.etextFilters, f)
 }
 
 // AddPGFileFilter adds a PGFileFilter
-func (r *RDFLoader) AddPGFileFilter(f PGFileFilter) {
+func (r *Loader) AddPGFileFilter(f books.PGFileFilter) {
 	r.pgFileFilters = append(r.pgFileFilters, f)
 }
 
 // Load parses and loads the XML data within its contents.
 // It only returns the entities that pass the filters that have been set up
 // before calling load. If no filters are set up, this will return empty results!
-func (r *RDFLoader) Load(bookdata *BookData) {
+func (r *Loader) Load(bookdata *books.BookData) {
 	decoder := xml.NewDecoder(r.reader)
 	decoder.Entity = r.entityMap
 
@@ -184,7 +186,7 @@ func (r *RDFLoader) Load(bookdata *BookData) {
 
 	// first go through the files and organize them, eliminating
 	// the ones that don't pass the filter
-	files := make(map[string][]PGFile)
+	files := make(map[string][]books.PGFile)
 eachfile:
 	for i := range data.Files {
 		file := data.Files[i].asFile()
@@ -195,7 +197,7 @@ eachfile:
 		}
 		key := file.IsFormatOf[1:] // this has a # at the beginning
 		if f, ok := files[key]; !ok {
-			files[key] = []PGFile{file}
+			files[key] = []books.PGFile{file}
 		} else {
 			files[key] = append(f, file)
 		}
@@ -203,7 +205,7 @@ eachfile:
 
 	// Now go through the etexts and keep the ones that pass
 	// the filter AND that have a non-empty list of files.
-	etexts := make(map[string]EText)
+	etexts := make([]books.EText, 0)
 	for i := range data.Etexts {
 		et := data.Etexts[i].asEText()
 		for _, filt := range r.etextFilters {
@@ -213,11 +215,10 @@ eachfile:
 			// only store objects we have files for
 			if len(files[et.ID]) != 0 {
 				et.Files = files[et.ID]
-				etexts[et.ID] = et
+				etexts = append(etexts, et)
 			}
 		}
 	}
 
-	log.Printf("loaded %d items", len(etexts))
-	bookData.Books = etexts
+	bookdata.Update(etexts)
 }

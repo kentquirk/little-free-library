@@ -1,4 +1,4 @@
-package main
+package books
 
 import (
 	"errors"
@@ -63,12 +63,6 @@ func createRegex(value string) (*regexp.Regexp, error) {
 // Eve matches only Eve
 // L.n_ matches Lynn and Linda
 // _l.n_ matches Linda, Evelyn and Lynn
-//
-// TODO: MOVE THIS PART
-// Multiple constraints can be specified and will normally be ANDed together (only items that
-// meet all constraints will be included). However, the "or" constraint, if true, will include
-// items that meet one or more constraints. Combining or with exclusive constraints is tricky and
-// may not work in an intuitive way.
 func ConstraintFromText(name string, value string) (ConstraintFunctor, bool, error) {
 	exclude := false
 	useRegexp := false
