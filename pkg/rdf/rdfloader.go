@@ -1,11 +1,13 @@
 package rdf
 
 import (
-	"bufio"
+	"archive/tar"
 	"encoding/xml"
 	"io"
+	"io/ioutil"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,20 +58,60 @@ func (c *multiname) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 // Subject/Subjects is like Creators, but since the internals of the two representations
 // differ, we can handle them both in the XML definition and fix it up in postprocessing.
 type xmlEtext struct {
-	ID            string    `xml:"ID,attr"`
-	Publisher     string    `xml:"publisher"`
-	Title         string    `xml:"title"`
-	Creator       multiname `xml:"creator"`
-	Contributor   multiname `xml:"contributor"`
-	FriendlyTitle string    `xml:"friendlytitle"`
-	Language      string    `xml:"language>ISO639-2>value"`
-	Subject       string    `xml:"subject>LCSH>value"`
-	Subjects      []string  `xml:"subject>Bag>li>LCSH>value"`
-	Created       string    `xml:"created>W3CDTF>value"`
-	Downloads     int       `xml:"downloads>nonNegativeInteger>value"`
-	Rights        struct {
+	ID              string     `xml:"about,attr"`
+	Publisher       string     `xml:"publisher"`
+	Title           string     `xml:"title"`
+	Creators        []xmlAgent `xml:"creator>agent"`
+	Illustrators    []xmlAgent `xml:"ill>agent"`
+	Contributors    multiname  `xml:"contributor"`
+	TableOfContents string     `xml:"tableOfContents"`
+	Language        string     `xml:"language>Description>value"`
+	Subjects        []struct { // we need both value and memberOf because some of the subjects are useless to us
+		Description struct {
+			Subject  string `xml:"value"`
+			MemberOf struct {
+				Resource string `xml:"resource,attr"`
+			} `xml:"memberOf"`
+		} `xml:"Description"`
+	} `xml:"subject"`
+	Issued    string `xml:"issued"`
+	Downloads int    `xml:"downloads"`
+	Rights    string `xml:"rights"`
+	License   struct {
+		Text     string `xml:",chardata"`
 		Resource string `xml:"resource,attr"`
-	} `xml:"rights"`
+	} `xml:"license"`
+	Copyright string    `xml:"marc260"`
+	Edition   string    `xml:"marc250"`
+	Type      string    `xml:"type>Description>value"`
+	Formats   []xmlFile `xml:"hasFormat>file"`
+}
+
+type xmlAgent struct {
+	ID        string   `xml:"about,attr"`
+	Name      string   `xml:"name"`
+	Alias     []string `xml:"alias"`
+	Birthdate struct {
+		Text     string `xml:",chardata"`
+		Datatype string `xml:"datatype,attr"`
+	} `xml:"birthdate"`
+	Deathdate struct {
+		Text     string `xml:",chardata"`
+		Datatype string `xml:"datatype,attr"`
+	} `xml:"deathdate"`
+	Webpage []struct {
+		Resource string `xml:"resource,attr"`
+	} `xml:"webpage"`
+}
+
+type xmlFile struct {
+	About      string   `xml:"about,attr"`
+	Formats    []string `xml:"format>Description>value"`
+	Extent     int      `xml:"extent"`
+	Modified   string   `xml:"modified"`
+	IsFormatOf struct {
+		Resource string `xml:"resource,attr"`
+	} `xml:"isFormatOf"`
 }
 
 const xmlDateFormat = "2006-01-02"
@@ -77,32 +119,43 @@ const xmlDateFormat = "2006-01-02"
 // asEText generates an EText from an xmlEtext
 func (x *xmlEtext) asEText() books.EText {
 	et := books.EText{
-		ID:            x.ID,
-		Publisher:     x.Publisher,
-		Title:         x.Title,
-		Creator:       x.Creator,
-		Contributor:   x.Contributor,
-		FriendlyTitle: x.FriendlyTitle,
-		Language:      x.Language,
-		Subjects:      x.Subjects,
-		DownloadCount: x.Downloads,
-		Rights:        x.Rights.Resource,
-		Files:         make([]books.PGFile, 0),
+		ID:              x.ID,
+		Publisher:       x.Publisher,
+		Title:           x.Title,
+		Creators:        make([]string, 0, 1),
+		Illustrators:    make([]string, 0, 0),
+		TableOfContents: x.TableOfContents,
+		Language:        x.Language,
+		DownloadCount:   x.Downloads,
+		Rights:          x.Rights,
+		Copyright:       x.Copyright,
+		CopyrightYears:  make([]int, 0, 0),
+		Edition:         x.Edition,
+		Type:            x.Type,
+		Files:           make([]books.PGFile, 0, 4),
 	}
-	et.Subjects = append(et.Subjects, x.Subject)
+	for i := range x.Creators {
+		et.Creators = append(et.Creators, x.Creators[i].ID)
+	}
+	for i := range x.Illustrators {
+		et.Illustrators = append(et.Illustrators, x.Illustrators[i].ID)
+	}
+	for i := range x.Subjects {
+		if strings.HasSuffix(x.Subjects[i].Description.MemberOf.Resource, "LCSH") {
+			et.Subjects = append(et.Subjects, x.Subjects[i].Description.Subject)
+		}
+	}
+	if len(x.Copyright) > 4 {
+		p := regexp.MustCompile("[12][0-9]{3}")
+		years := p.FindAllString(x.Copyright, -1)
+		for _, y := range years {
+			year, _ := strconv.Atoi(y)
+			et.CopyrightYears = append(et.CopyrightYears, year)
+		}
+	}
 	// TODO: log if this gets an error
-	et.Created, _ = time.Parse(xmlDateFormat, x.Created)
+	et.Issued, _ = time.Parse(xmlDateFormat, x.Issued)
 	return et
-}
-
-type xmlFile struct {
-	About      string   `xml:"about,attr"`
-	Formats    []string `xml:"format>IMT>value"`
-	Extent     string   `xml:"extent"`
-	Modified   string   `xml:"modified>W3CDTF>value"`
-	IsFormatOf struct {
-		Resource string `xml:"resource,attr"`
-	} `xml:"isFormatOf"`
 }
 
 func (x *xmlFile) asFile() books.PGFile {
@@ -121,44 +174,21 @@ func (x *xmlFile) asFile() books.PGFile {
 type xmlRdf struct {
 	XMLName    xml.Name   `xml:"RDF"`
 	Namespaces []string   `xml:",any,attr"`
-	Etexts     []xmlEtext `xml:"etext"`
-	Files      []xmlFile  `xml:"file"`
+	Etexts     []xmlEtext `xml:"ebook"`
 }
 
 // Loader loads an RDF file given a reader to it
 type Loader struct {
-	reader        *bufio.Reader
-	entityMap     map[string]string
+	reader        io.Reader
 	etextFilters  []books.ETextFilter
 	pgFileFilters []books.PGFileFilter
 }
 
 const bufsize = 4096
 
-// NewLoader constructs an RDF Loader from a reader. It preloads the entities from the reader.
-// We have some invented XML entities that we need to fix on the way by.
-// These entities are defined in the beginning of the XML file, but it is difficult
-// to get that information through the XML library. So instead, we can
-// peek into the file at the first 4K bytes (without advancing the read pointer)
-// to find lines that look like this:
-// <!ENTITY pg  "Project Gutenberg">
-// we use this to populate an entity map that we pass to the decoder when we load.
+// NewLoader constructs an RDF Loader from a reader.
 func NewLoader(r io.Reader) *Loader {
-	loader := &Loader{
-		reader: bufio.NewReaderSize(r, bufsize),
-		entityMap: map[string]string{
-			"pg":  "Project Gutenberg",
-			"lic": "LICENSE",
-			"f":   "WEBROOT/",
-		},
-	}
-	if prefix, err := loader.reader.Peek(bufsize); err == nil {
-		pat := regexp.MustCompile(`ENTITY +([a-z]+) +"([^"]+)"`)
-		matches := pat.FindAllStringSubmatch(string(prefix), -1)
-		for _, m := range matches {
-			loader.entityMap[m[1]] = m[2]
-		}
-	}
+	loader := &Loader{reader: r}
 	return loader
 }
 
@@ -172,35 +202,16 @@ func (r *Loader) AddPGFileFilter(f books.PGFileFilter) {
 	r.pgFileFilters = append(r.pgFileFilters, f)
 }
 
-// Load parses and loads the XML data within its contents.
+// LoadBulk parses and loads the XML data within its contents, expecting the contents to
+// be a single file containing one or more EText entities.
 // It only returns the entities that pass the filters that have been set up
 // before calling load. If no filters are set up, this will return empty results!
-func (r *Loader) Load(bookdata *books.BookData) {
+func (r *Loader) LoadBulk(bookdata *books.BookData) {
 	decoder := xml.NewDecoder(r.reader)
-	decoder.Entity = r.entityMap
 
 	var data xmlRdf
 	if err := decoder.Decode(&data); err != nil {
 		log.Fatal(err)
-	}
-
-	// first go through the files and organize them, eliminating
-	// the ones that don't pass the filter
-	files := make(map[string][]books.PGFile)
-eachfile:
-	for i := range data.Files {
-		file := data.Files[i].asFile()
-		for _, filt := range r.pgFileFilters {
-			if !filt(&file) {
-				continue eachfile
-			}
-		}
-		key := file.IsFormatOf[1:] // this has a # at the beginning
-		if f, ok := files[key]; !ok {
-			files[key] = []books.PGFile{file}
-		} else {
-			files[key] = append(f, file)
-		}
 	}
 
 	// if there are no etextFilters, add a dummy one that passes everything
@@ -208,8 +219,7 @@ eachfile:
 		r.AddETextFilter(func(*books.EText) bool { return true })
 	}
 
-	// Now go through the etexts and keep the ones that pass
-	// the filter AND that have a non-empty list of files.
+	// Go through the etexts and keep the ones that pass the filter
 	etexts := make([]books.EText, 0)
 	for i := range data.Etexts {
 		et := data.Etexts[i].asEText()
@@ -217,13 +227,81 @@ eachfile:
 			if !filt(&et) {
 				continue
 			}
+		eachfile:
+			for _, xf := range data.Etexts[i].Formats {
+				file := xf.asFile()
+				for _, filt := range r.pgFileFilters {
+					if !filt(&file) {
+						continue eachfile
+					}
+				}
+				et.Files = append(et.Files, file)
+			}
 			// only store objects we have files for
-			if len(files[et.ID]) != 0 {
-				et.Files = files[et.ID]
+			if len(et.Files) != 0 {
 				etexts = append(etexts, et)
 			}
 		}
 	}
 
 	bookdata.Update(etexts)
+}
+
+// LoadTar loads from a reader, expecting the reader to be a tar file that contains lots of files of books
+// It returns the number of files that were processed within the tar, and replaces the bookdata's contents.
+func (r *Loader) LoadTar(bookdata *books.BookData) int {
+	count := 0
+	tr := tar.NewReader(r.reader)
+	etexts := make([]books.EText, 0)
+	// if there are no etextFilters, add a dummy one that passes everything
+	if len(r.etextFilters) == 0 {
+		r.AddETextFilter(func(*books.EText) bool { return true })
+	}
+
+	for {
+		_, err := tr.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			log.Fatalf("Count=%d, err=%v", count, err)
+		}
+		var rdfData xmlRdf
+		buf, err := ioutil.ReadAll(tr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := xml.Unmarshal(buf, &rdfData); err != nil {
+			log.Fatal(err)
+		}
+		count++
+
+		// Go through the etexts (there's probably only one) and keep the ones that pass the filter
+		for i := range rdfData.Etexts {
+			et := rdfData.Etexts[i].asEText()
+			for _, filt := range r.etextFilters {
+				if !filt(&et) {
+					continue
+				}
+			eachfile:
+				for _, xf := range rdfData.Etexts[i].Formats {
+					file := xf.asFile()
+					for _, filt := range r.pgFileFilters {
+						if !filt(&file) {
+							continue eachfile
+						}
+					}
+					et.Files = append(et.Files, file)
+				}
+				// only store objects we have at least one file for
+				if len(et.Files) != 0 {
+					etexts = append(etexts, et)
+				}
+			}
+		}
+	}
+
+	bookdata.Update(etexts)
+	return count
 }

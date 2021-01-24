@@ -63,7 +63,7 @@ func testCreator(value string) ConstraintFunctor {
 
 func matchCreator(pat *regexp.Regexp) ConstraintFunctor {
 	return func(et EText) bool {
-		for _, s := range et.Creator {
+		for _, s := range et.Creators {
 			if pat.MatchString(s) {
 				return true
 			}
@@ -72,17 +72,17 @@ func matchCreator(pat *regexp.Regexp) ConstraintFunctor {
 	}
 }
 
-func testContributor(value string) ConstraintFunctor {
+func testIllustrator(value string) ConstraintFunctor {
 	pat, err := regexp.Compile(fmt.Sprintf(`(?is:\b%s\b)`, value))
 	if err != nil {
 		return nilFunctor
 	}
-	return matchContributor(pat)
+	return matchIllustrator(pat)
 }
 
-func matchContributor(pat *regexp.Regexp) ConstraintFunctor {
+func matchIllustrator(pat *regexp.Regexp) ConstraintFunctor {
 	return func(et EText) bool {
-		for _, s := range et.Contributor {
+		for _, s := range et.Illustrators {
 			if pat.MatchString(s) {
 				return true
 			}
@@ -147,6 +147,7 @@ const (
 	yearLE yearComparison = iota
 )
 
+// testYear checks the book's Issued date
 func testYear(value string, cmp yearComparison) ConstraintFunctor {
 	if value == "" {
 		return func(et EText) bool { return true }
@@ -155,11 +156,11 @@ func testYear(value string, cmp yearComparison) ConstraintFunctor {
 		y, _ := strconv.Atoi(value)
 		switch cmp {
 		case yearEQ:
-			return et.Created.Year() == y
+			return et.Issued.Year() == y
 		case yearGE:
-			return et.Created.Year() >= y
+			return et.Issued.Year() >= y
 		case yearLE:
-			return et.Created.Year() <= y
+			return et.Issued.Year() <= y
 		default:
 			return false
 		}

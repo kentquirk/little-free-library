@@ -11,34 +11,34 @@ func testEText() []EText {
 		{
 			ID:       "a",
 			Title:    "Evelyn's Story",
-			Creator:  []string{"Evelyn Excellent"},
+			Creators: []string{"Evelyn Excellent"},
 			Language: "en",
 			Subjects: []string{"Biography"},
-			Created:  time.Date(2005, 7, 18, 0, 0, 0, 0, time.UTC),
+			Issued:   time.Date(2005, 7, 18, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			ID:       "h",
 			Title:    "Hamilton",
-			Creator:  []string{"Lin-Manuel Miranda"},
+			Creators: []string{"Lin-Manuel Miranda"},
 			Language: "rap",
 			Subjects: []string{"History - Fiction", "History - Play", "Musical"},
-			Created:  time.Date(2016, 12, 25, 0, 0, 0, 0, time.UTC),
+			Issued:   time.Date(2016, 12, 25, 0, 0, 0, 0, time.UTC),
 		},
 		{
-			ID:          "w",
-			Title:       "Wonder Women Play Through the Ages",
-			Contributor: []string{"Lynda Carter", "Gal Gadot"},
-			Language:    "en",
-			Subjects:    []string{"Comics -- Fiction"},
-			Created:     time.Date(2018, 10, 10, 0, 0, 0, 0, time.UTC),
+			ID:           "w",
+			Title:        "Wonder Women Play Through the Ages",
+			Illustrators: []string{"Lynda Carter", "Gal Gadot"},
+			Language:     "en",
+			Subjects:     []string{"Comics -- Fiction"},
+			Issued:       time.Date(2018, 10, 10, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			ID:       "e",
 			Title:    "The Woman's Music Bible",
-			Creator:  []string{"Eve"},
+			Creators: []string{"Eve"},
 			Language: "en",
 			Subjects: []string{"Music", "Religion"},
-			Created:  time.Date(1998, 1, 1, 0, 0, 0, 0, time.UTC),
+			Issued:   time.Date(1998, 1, 1, 0, 0, 0, 0, time.UTC),
 		},
 	}
 }
@@ -69,7 +69,7 @@ func TestConstraint_testCreator(t *testing.T) {
 	}
 }
 
-func TestConstraint_testContributor(t *testing.T) {
+func TestConstraint_testIllustrator(t *testing.T) {
 	data := testEText()
 	tests := []struct {
 		name string
@@ -81,7 +81,7 @@ func TestConstraint_testContributor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := testContributor(tt.p)
+			f := testIllustrator(tt.p)
 			result := ""
 			for _, book := range data {
 				if f(book) {
@@ -89,7 +89,7 @@ func TestConstraint_testContributor(t *testing.T) {
 				}
 			}
 			if result != tt.want {
-				t.Errorf("testContributor() = %v, want %v", result, tt.want)
+				t.Errorf("testIllustrator() = %v, want %v", result, tt.want)
 			}
 		})
 	}
@@ -237,7 +237,7 @@ func TestConstraint_matchCreator(t *testing.T) {
 	}
 }
 
-func TestConstraint_matchContributor(t *testing.T) {
+func TestConstraint_matchIllustrator(t *testing.T) {
 	data := testEText()
 	tests := []struct {
 		name string
@@ -253,7 +253,7 @@ func TestConstraint_matchContributor(t *testing.T) {
 			if err != nil {
 				t.Errorf("createRegex returned error %e", err)
 			}
-			f := matchContributor(pat)
+			f := matchIllustrator(pat)
 			result := ""
 			for _, book := range data {
 				if f(book) {
@@ -261,7 +261,7 @@ func TestConstraint_matchContributor(t *testing.T) {
 				}
 			}
 			if result != tt.want {
-				t.Errorf("matchContributor() = %v, want %v", result, tt.want)
+				t.Errorf("matchIllustrator() = %v, want %v", result, tt.want)
 			}
 		})
 	}

@@ -10,25 +10,29 @@ import (
 type PGFile struct {
 	Location   string    `json:"location,omitempty"`
 	Formats    []string  `json:"formats,omitempty"`
-	FileSize   string    `json:"filesize,omitempty"`
+	FileSize   int       `json:"filesize,omitempty"`
 	Modified   time.Time `json:"-"`
 	IsFormatOf string    `json:"isformatof,omitempty"`
 }
 
 // EText is the parsed and processed structure of an etext object as defined in the XML.
 type EText struct {
-	ID            string    `json:"id,omitempty"`
-	Publisher     string    `json:"publisher,omitempty"`
-	Title         string    `json:"title,omitempty"`
-	Creator       []string  `json:"creator,omitempty"`
-	Contributor   []string  `json:"contributor,omitempty"`
-	FriendlyTitle string    `json:"friendly_title,omitempty"`
-	Language      string    `json:"language,omitempty"`
-	Subjects      []string  `json:"subjects,omitempty"`
-	Created       time.Time `json:"created,omitempty"`
-	DownloadCount int       `json:"download_count,omitempty"`
-	Rights        string    `json:"-"`
-	Files         []PGFile  `json:"files,omitempty"`
+	ID              string    `json:"id,omitempty"`
+	Publisher       string    `json:"publisher,omitempty"`
+	Title           string    `json:"title,omitempty"`
+	Creators        []string  `json:"creators,omitempty"`
+	Illustrators    []string  `json:"illustrators,omitempty"`
+	TableOfContents string    `json:"table_of_contents,omitempty"`
+	Language        string    `json:"language,omitempty"`
+	Subjects        []string  `json:"subjects,omitempty"`
+	Issued          time.Time `json:"issued,omitempty"`
+	DownloadCount   int       `json:"download_count,omitempty"`
+	Rights          string    `json:"rights,omitempty"`
+	Copyright       string    `json:"copyright,omitempty"`
+	CopyrightYears  []int     `json:"-"`
+	Edition         string    `json:"edition,omitempty"`
+	Type            string    `json:"type,omitempty"`
+	Files           []PGFile  `json:"files,omitempty"`
 }
 
 // BookData is the type that we use to contain the book data and wrap all the queries.
@@ -54,6 +58,11 @@ func (b *BookData) Add(bs ...EText) {
 // Update replaces the entire contents of the BookData
 func (b *BookData) Update(bs []EText) {
 	b.books = bs
+}
+
+// NBooks returns the number of books in the dataset
+func (b *BookData) NBooks() int {
+	return len(b.books)
 }
 
 // Get retrieves a book by its ID, or returns false in its second argument.

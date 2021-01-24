@@ -23,7 +23,7 @@ func parseIntWithDefault(input string, def int) (int, error) {
 }
 
 type service struct {
-	Config config
+	Config Config
 	Books  *books.BookData
 }
 

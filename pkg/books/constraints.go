@@ -92,24 +92,24 @@ outer:
 
 	retfunc := nilFunctor
 	switch name {
-	case "creator":
+	case "author":
 		if useRegexp {
 			retfunc = matchCreator(pat)
 		} else {
 			retfunc = testCreator(value)
 		}
 
-	case "contributor":
+	case "illustrator", "ill":
 		if useRegexp {
-			retfunc = matchContributor(pat)
+			retfunc = matchIllustrator(pat)
 		} else {
-			retfunc = testContributor(value)
+			retfunc = testIllustrator(value)
 		}
-	case "author":
+	case "creator":
 		if useRegexp {
-			retfunc = Or(matchCreator(pat), matchContributor(pat))
+			retfunc = Or(matchCreator(pat), matchIllustrator(pat))
 		} else {
-			retfunc = Or(testCreator(value), testContributor(value))
+			retfunc = Or(testCreator(value), testIllustrator(value))
 		}
 	case "title":
 		if useRegexp {
@@ -131,9 +131,9 @@ outer:
 		}
 	case "any":
 		if useRegexp {
-			retfunc = Or(matchCreator(pat), matchContributor(pat), matchTitle(pat), matchSubject(pat))
+			retfunc = Or(matchCreator(pat), matchIllustrator(pat), matchTitle(pat), matchSubject(pat))
 		} else {
-			retfunc = Or(testCreator(value), testContributor(value), testTitle(value), testSubject(value))
+			retfunc = Or(testCreator(value), testIllustrator(value), testTitle(value), testSubject(value))
 		}
 	case "language":
 		retfunc = testLanguage(value)
