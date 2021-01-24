@@ -36,33 +36,15 @@ outer:
 	return result, nil
 }
 
-// multiname is an array of names; we need the special type because
-// the XML uses a single "creator" or "contributor" object if there's only one, but uses a "bag" if there
-// are more than one. So we need a special unmarshaler to handle it.
-type multiname []string
-
-// UnmarshalXML implements the Unmarshaler interface for the multiname type.
-func (c *multiname) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	result, err := extractCharDataToEndToken(d, start)
-	if err != nil {
-		return err
-	}
-	(*c) = result
-	return nil
-}
-
-// xmlEtext represents a single "etext" object as read from the gutenberg catalog.
+// xmlEbook represents a single "ebook" object as read from the gutenberg catalog.
 // This structure was derived by pasting XML into an XML-to-Go converter and then
 // editing it down to the bare minimum.
-// Subject/Subjects is like Creators, but since the internals of the two representations
-// differ, we can handle them both in the XML definition and fix it up in postprocessing.
-type xmlEtext struct {
+type xmlEbook struct {
 	ID              string     `xml:"about,attr"`
 	Publisher       string     `xml:"publisher"`
 	Title           string     `xml:"title"`
 	Creators        []xmlAgent `xml:"creator>agent"`
 	Illustrators    []xmlAgent `xml:"ill>agent"`
-	Contributors    multiname  `xml:"contributor"`
 	TableOfContents string     `xml:"tableOfContents"`
 	Language        string     `xml:"language>Description>value"`
 	Subjects        []struct { // we need both value and memberOf because some of the subjects are useless to us
@@ -115,9 +97,9 @@ type xmlFile struct {
 
 const xmlDateFormat = "2006-01-02"
 
-// asEText generates an EText from an xmlEtext
-func (x *xmlEtext) asEText() books.EText {
-	et := books.EText{
+// asEBook generates an EBook from an xmlEBook
+func (x *xmlEbook) asEBook() books.EBook {
+	et := books.EBook{
 		ID:              x.ID,
 		Publisher:       x.Publisher,
 		Title:           x.Title,
@@ -173,13 +155,13 @@ func (x *xmlFile) asFile() books.PGFile {
 type xmlRdf struct {
 	XMLName    xml.Name   `xml:"RDF"`
 	Namespaces []string   `xml:",any,attr"`
-	Etexts     []xmlEtext `xml:"ebook"`
+	EBooks     []xmlEbook `xml:"ebook"`
 }
 
 // Loader loads an RDF file given a reader to it
 type Loader struct {
 	reader        io.Reader
-	etextFilters  []books.ETextFilter
+	ebookFilters  []books.EBookFilter
 	pgFileFilters []books.PGFileFilter
 	loadOnly      int
 }
@@ -194,18 +176,18 @@ func NewLoader(r io.Reader, options ...LoaderOption) *Loader {
 	for _, opt := range options {
 		opt(loader)
 	}
-	// if after this there are no etextFilters, add a dummy one that passes everything
-	if len(loader.etextFilters) == 0 {
-		loader.etextFilters = []books.ETextFilter{func(*books.EText) bool { return true }}
+	// if after this there are no ebookFilters, add a dummy one that passes everything
+	if len(loader.ebookFilters) == 0 {
+		loader.ebookFilters = []books.EBookFilter{func(*books.EBook) bool { return true }}
 	}
 
 	return loader
 }
 
-// ETextFilter returns a LoaderOption that adds an ETextFilter
-func ETextFilter(f books.ETextFilter) LoaderOption {
+// EBookFilter returns a LoaderOption that adds an EBookFilter
+func EBookFilter(f books.EBookFilter) LoaderOption {
 	return func(ldr *Loader) {
-		ldr.etextFilters = append(ldr.etextFilters, f)
+		ldr.ebookFilters = append(ldr.ebookFilters, f)
 	}
 }
 
@@ -224,23 +206,23 @@ func LoadOnly(n int) LoaderOption {
 }
 
 // load is a helper function used by the Load functions
-func (r *Loader) load(rdr io.Reader) []books.EText {
+func (r *Loader) load(rdr io.Reader) []books.EBook {
 	var data xmlRdf
 	decoder := xml.NewDecoder(rdr)
 	if err := decoder.Decode(&data); err != nil {
 		log.Fatal(err)
 	}
 
-	// Go through the etexts and keep the ones that pass the filter
-	etexts := make([]books.EText, 0)
-	for i := range data.Etexts {
-		et := data.Etexts[i].asEText()
-		for _, filt := range r.etextFilters {
+	// Go through the ebooks and keep the ones that pass the filter
+	ebooks := make([]books.EBook, 0)
+	for i := range data.EBooks {
+		et := data.EBooks[i].asEBook()
+		for _, filt := range r.ebookFilters {
 			if !filt(&et) {
 				continue
 			}
 		eachfile:
-			for _, xf := range data.Etexts[i].Formats {
+			for _, xf := range data.EBooks[i].Formats {
 				file := xf.asFile()
 				for _, filt := range r.pgFileFilters {
 					if !filt(&file) {
@@ -251,31 +233,32 @@ func (r *Loader) load(rdr io.Reader) []books.EText {
 			}
 			// only store objects we have files for
 			if len(et.Files) != 0 {
-				etexts = append(etexts, et)
+				ebooks = append(ebooks, et)
 			}
 		}
 	}
-	return etexts
+	return ebooks
 }
 
 // LoadOne parses and loads the XML data within its contents, expecting the contents to
-// be a single file containing one or more EText entities.
+// be a single file containing one or more EBook entities.
 // It only returns the entities that pass the filters that have been set up
 // before calling load.
 // Returns 1 (the number of files processed).
 func (r *Loader) LoadOne(bookdata *books.BookData) int {
-	// Go through the etexts and keep the ones that pass the filter
-	etexts := r.load(r.reader)
-	bookdata.Update(etexts)
+	// Go through the ebooks and keep the ones that pass the filter
+	ebooks := r.load(r.reader)
+	bookdata.Update(ebooks)
 	return 1
 }
 
 // LoadTar loads from a reader, expecting the reader to be a tar file that contains lots of files of books
 // It returns the number of files that were processed within the tar, and replaces the bookdata's contents.
+// If loadOnly is set, it limits the number of items loaded. This is mainly useful for testing.
 func (r *Loader) LoadTar(bookdata *books.BookData) int {
 	count := 0
 	tr := tar.NewReader(r.reader)
-	etexts := make([]books.EText, 0)
+	ebooks := make([]books.EBook, 0)
 	for {
 		_, err := tr.Next()
 		if err == io.EOF {
@@ -285,13 +268,13 @@ func (r *Loader) LoadTar(bookdata *books.BookData) int {
 			log.Fatalf("Count=%d, err=%v", count, err)
 		}
 		newtexts := r.load(tr)
-		etexts = append(etexts, newtexts...)
+		ebooks = append(ebooks, newtexts...)
 		count++
-		if r.loadOnly > 0 && len(etexts) >= r.loadOnly {
+		if r.loadOnly > 0 && len(ebooks) >= r.loadOnly {
 			break // end early because loadOnly
 		}
 	}
 
-	bookdata.Update(etexts)
+	bookdata.Update(ebooks)
 	return count
 }

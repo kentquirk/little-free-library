@@ -47,6 +47,10 @@ type Config struct {
 	RefreshTime     time.Duration `env:"REFRESH_TIME" default:"23h17m"`
 	URL             string        `env:"URL" default:"/Users/kent/code/little-free-library/data/rdf-files.tar.bz2"`
 	LoadOnly        int           `env:"LOAD_ONLY"`
+	// This is the URL that is current for the latest catalog at gutenberg.org as of January 2021. Please do not
+	// use it for testing; download a local copy. Only use this URL once you are confident that your code is running
+	// properly and will not spam the server with requests. Best to leave the default value as a local file and override
+	// it in your server configuration.
 	// URL             string        `env:"URL" default:"http://www.gutenberg.org/cache/epub/feeds/rdf-files.tar.bz2"`
 }
 
@@ -123,7 +127,7 @@ func load(svc *service) {
 		// We don't want to be delivering data that our users can't use, so we pre-filter the data that goes
 		// into the dataset. The target language(s) and target formats can be specified in the config, and
 		// only the data that meets these specifications will be saved.
-		rdf.ETextFilter(books.LanguageFilter(svc.Config.Languages...)),
+		rdf.EBookFilter(books.LanguageFilter(svc.Config.Languages...)),
 		rdf.PGFileFilter(books.ContentFilter(svc.Config.Formats...)),
 		rdf.LoadOnly(svc.Config.LoadOnly),
 	)

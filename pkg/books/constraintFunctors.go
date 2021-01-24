@@ -10,12 +10,12 @@ import (
 // ConstraintFunctor is the type of the function used to evaluate a constraint.
 // We need to benchmark to see if it would make a difference to make it
 // take a pointer.
-type ConstraintFunctor func(EText) bool
+type ConstraintFunctor func(EBook) bool
 
 // ConstraintCombiner is an operator that can combine a set of constraints, like AND or OR.
 type ConstraintCombiner func(...ConstraintFunctor) ConstraintFunctor
 
-func nilFunctor(EText) bool {
+func nilFunctor(EBook) bool {
 	return false
 }
 
@@ -26,7 +26,7 @@ func Or(cfs ...ConstraintFunctor) ConstraintFunctor {
 	if len(cfs) == 0 {
 		return nilFunctor
 	}
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		for _, cf := range cfs {
 			if cf(et) {
 				return true
@@ -43,7 +43,7 @@ func And(cfs ...ConstraintFunctor) ConstraintFunctor {
 	if len(cfs) == 0 {
 		return nilFunctor
 	}
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		for _, cf := range cfs {
 			if !cf(et) {
 				return false
@@ -62,7 +62,7 @@ func testCreator(value string) ConstraintFunctor {
 }
 
 func matchCreator(pat *regexp.Regexp) ConstraintFunctor {
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		for _, s := range et.Creators {
 			if pat.MatchString(s) {
 				return true
@@ -81,7 +81,7 @@ func testIllustrator(value string) ConstraintFunctor {
 }
 
 func matchIllustrator(pat *regexp.Regexp) ConstraintFunctor {
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		for _, s := range et.Illustrators {
 			if pat.MatchString(s) {
 				return true
@@ -100,7 +100,7 @@ func testSubject(value string) ConstraintFunctor {
 }
 
 func matchSubject(pat *regexp.Regexp) ConstraintFunctor {
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		for _, s := range et.Subjects {
 			if pat.MatchString(s) {
 				return true
@@ -119,7 +119,7 @@ func testTitle(value string) ConstraintFunctor {
 }
 
 func matchTitle(pat *regexp.Regexp) ConstraintFunctor {
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		return pat.MatchString(et.Title)
 	}
 }
@@ -127,7 +127,7 @@ func matchTitle(pat *regexp.Regexp) ConstraintFunctor {
 // tests languages for exact equality, and allows multiple languages
 // separated by period (.)
 func testLanguage(value string) ConstraintFunctor {
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		for _, l := range strings.Split(value, ".") {
 			if et.Language == l {
 				return true
@@ -150,9 +150,9 @@ const (
 // testYear checks the book's Issued date
 func testYear(value string, cmp yearComparison) ConstraintFunctor {
 	if value == "" {
-		return func(et EText) bool { return true }
+		return func(et EBook) bool { return true }
 	}
-	return func(et EText) bool {
+	return func(et EBook) bool {
 		y, _ := strconv.Atoi(value)
 		switch cmp {
 		case yearEQ:

@@ -1,11 +1,11 @@
 package books
 
 import (
-	"log"
+	"math/rand"
 	"time"
 )
 
-// PGFile is the parsed and processed structure of an XML file object
+// PGFile is the parsed and processed structure of an xmlFile object
 // within the Project Gutenberg data.
 type PGFile struct {
 	Location   string    `json:"location,omitempty"`
@@ -15,8 +15,8 @@ type PGFile struct {
 	IsFormatOf string    `json:"isformatof,omitempty"`
 }
 
-// EText is the parsed and processed structure of an etext object as defined in the XML.
-type EText struct {
+// EBook is the parsed and processed structure of an ebook object as defined in the XML.
+type EBook struct {
 	ID              string    `json:"id,omitempty"`
 	Publisher       string    `json:"publisher,omitempty"`
 	Title           string    `json:"title,omitempty"`
@@ -40,23 +40,23 @@ type EText struct {
 // This is intended to be an opaque data structure; use accessors and query methods
 // to retrieve data.
 type BookData struct {
-	books []EText
+	books []EBook
 }
 
 // NewBookData constructs a BookData object
 func NewBookData() *BookData {
 	return &BookData{
-		books: make([]EText, 0),
+		books: make([]EBook, 0),
 	}
 }
 
-// Add inserts one or more EText entities into the BookData
-func (b *BookData) Add(bs ...EText) {
+// Add inserts one or more EBook entities into the BookData
+func (b *BookData) Add(bs ...EBook) {
 	b.books = append(b.books, bs...)
 }
 
 // Update replaces the entire contents of the BookData
-func (b *BookData) Update(bs []EText) {
+func (b *BookData) Update(bs []EBook) {
 	b.books = bs
 }
 
@@ -67,13 +67,13 @@ func (b *BookData) NBooks() int {
 
 // Get retrieves a book by its ID, or returns false in its second argument.
 // This currently searches linearly; could easily be sped up with an ID index.
-func (b *BookData) Get(id string) (EText, bool) {
+func (b *BookData) Get(id string) (EBook, bool) {
 	for i := range b.books {
 		if b.books[i].ID == id {
 			return b.books[i], true
 		}
 	}
-	return EText{}, false
+	return EBook{}, false
 }
 
 // SummaryData is the data structure used to return collection-level information
@@ -106,28 +106,69 @@ func (b *BookData) Summary() SummaryData {
 }
 
 // Query does a query against the book data according to a ConstraintSpec.
-// TODO: Fix and test excludes
-func (b *BookData) Query(constraints *ConstraintSpec) []EText {
-	result := make([]EText, 0)
-	log.Println(constraints)
+// If the random flag is set, we choose a random subset of matching items.
+//
+// To choose n out of a stream of items, read the items one at a time. Keep
+// the first n items in a set S.
+// Now when reading the m-th item I (m>n now), keep it with probability n/m.
+// If you do keep it, select an item U uniformly at random from S, and replace
+// U with I.
+func (b *BookData) Query(constraints *ConstraintSpec) []EBook {
+	result := make([]EBook, 0)
+
+	// create the random number generator only if we need it
+	var random *rand.Rand
+	if constraints.Random {
+		random = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
 
 	matchCount := 0
+	replace := false
+	include := constraints.IncludeCombiner(constraints.Includes...)
+	exclude := constraints.ExcludeCombiner(constraints.Excludes...)
 	for k := range b.books {
 		if len(result) >= constraints.Limit {
-			break
+			if !constraints.Random {
+				break
+			} else {
+				replace = true
+			}
 		}
-		include := constraints.IncludeCombiner(constraints.Includes...)
-		// exclude := constraints.ExcludeCombiner(constraints.Excludes...)
 		// empty include list means include all; empty exclude list means exclude none
 		if len(constraints.Includes) == 0 || include(b.books[k]) {
-			// if len(constraints.Excludes) == 0 || !exclude(b.Books[k]) {
-			matchCount++
-			if matchCount < constraints.Limit*constraints.Page {
-				continue
+			if len(constraints.Excludes) == 0 || !exclude(b.books[k]) {
+				matchCount++
+				if !constraints.Random && matchCount < constraints.Limit*constraints.Page {
+					continue
+				}
+				if replace {
+					keep := (random.Float64() < (float64(constraints.Limit) / float64(matchCount)))
+					if keep {
+						randomIndex := random.Intn(constraints.Limit)
+						result[randomIndex] = b.books[k]
+					}
+				} else {
+					result = append(result, b.books[k])
+				}
 			}
-			result = append(result, b.books[k])
-			// }
 		}
 	}
 	return result
+}
+
+// Count does a query against the book data according to a ConstraintSpec and returns the number
+// of matching items (ignoring Limit and Random).
+func (b *BookData) Count(constraints *ConstraintSpec) int {
+	matchCount := 0
+	include := constraints.IncludeCombiner(constraints.Includes...)
+	exclude := constraints.ExcludeCombiner(constraints.Excludes...)
+	for k := range b.books {
+		// empty include list means include all; empty exclude list means exclude none
+		if len(constraints.Includes) == 0 || include(b.books[k]) {
+			if len(constraints.Excludes) == 0 || !exclude(b.books[k]) {
+				matchCount++
+			}
+		}
+	}
+	return matchCount
 }

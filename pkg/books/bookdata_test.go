@@ -6,8 +6,8 @@ import (
 )
 
 // We don't need all the fields for our testing
-func testEText() []EText {
-	return []EText{
+func testEBook() []EBook {
+	return []EBook{
 		{
 			ID:       "a",
 			Title:    "Evelyn's Story",
@@ -44,7 +44,7 @@ func testEText() []EText {
 }
 
 func TestConstraint_testCreator(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -70,7 +70,7 @@ func TestConstraint_testCreator(t *testing.T) {
 }
 
 func TestConstraint_testIllustrator(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -96,7 +96,7 @@ func TestConstraint_testIllustrator(t *testing.T) {
 }
 
 func TestConstraint_testSubject(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -123,7 +123,7 @@ func TestConstraint_testSubject(t *testing.T) {
 }
 
 func TestConstraint_testTitle(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -149,7 +149,7 @@ func TestConstraint_testTitle(t *testing.T) {
 }
 
 func TestConstraint_testLanguage(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -176,7 +176,7 @@ func TestConstraint_testLanguage(t *testing.T) {
 }
 
 func TestConstraint_testYear(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		year string
@@ -208,7 +208,7 @@ func TestConstraint_testYear(t *testing.T) {
 // match tests
 
 func TestConstraint_matchCreator(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -238,7 +238,7 @@ func TestConstraint_matchCreator(t *testing.T) {
 }
 
 func TestConstraint_matchIllustrator(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -268,7 +268,7 @@ func TestConstraint_matchIllustrator(t *testing.T) {
 }
 
 func TestConstraint_matchSubject(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -298,7 +298,7 @@ func TestConstraint_matchSubject(t *testing.T) {
 }
 
 func TestConstraint_matchTitle(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		p    string
@@ -329,7 +329,7 @@ func TestConstraint_matchTitle(t *testing.T) {
 
 // Combiners
 func TestConstraint_Or(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		f    ConstraintFunctor
@@ -356,7 +356,7 @@ func TestConstraint_Or(t *testing.T) {
 }
 
 func TestConstraint_And(t *testing.T) {
-	data := testEText()
+	data := testEBook()
 	tests := []struct {
 		name string
 		f    ConstraintFunctor

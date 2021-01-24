@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/kentquirk/little-free-library/pkg/books"
 	"github.com/labstack/echo/v4"
@@ -39,6 +40,7 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/doc", svc.doc)
 	e.GET("/health", svc.health)
 	e.GET("/books/query", svc.bookQuery)
+	e.GET("/books/count", svc.bookQuery) // yes, the same function
 	e.GET("/books/summary", svc.bookSummary)
 	e.GET("/details/:id", svc.bookDetails)
 	e.GET("/qr/:id", svc.qrcodegen)
@@ -149,6 +151,8 @@ func (svc *service) bookQuery(c echo.Context) error {
 					return echo.NewHTTPError(http.StatusBadRequest, "page must be numeric and >0")
 				}
 				constraints.Page = n
+			case "random", "rand":
+				constraints.Random = true
 			default:
 				constraint, exclude, err := books.ConstraintFromText(k, v)
 				if err != nil {
@@ -163,8 +167,14 @@ func (svc *service) bookQuery(c echo.Context) error {
 		}
 	}
 	// ok, we have a constraint spec -- execute it
-	result := svc.Books.Query(constraints)
-	return c.JSON(http.StatusOK, result)
+	// this same handler gets used for query and count
+	if strings.HasSuffix(c.Path(), "query") {
+		result := svc.Books.Query(constraints)
+		return c.JSON(http.StatusOK, result)
+	} else {
+		result := svc.Books.Count(constraints)
+		return c.JSON(http.StatusOK, result)
+	}
 }
 
 func (svc *service) bookSummary(c echo.Context) error {

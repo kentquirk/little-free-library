@@ -1,7 +1,8 @@
 package books
 
-// ConstraintSpec is used to store a complete set of constraints
-// Page is in units of a multiple of Limit
+// ConstraintSpec is used to store a complete set of constraints.
+// Page is in units of a multiple of Limit.
+// If Random is true, Page is ignored.
 type ConstraintSpec struct {
 	Includes        []ConstraintFunctor
 	IncludeCombiner ConstraintCombiner
@@ -9,6 +10,7 @@ type ConstraintSpec struct {
 	ExcludeCombiner ConstraintCombiner
 	Limit           int
 	Page            int
+	Random          bool
 }
 
 // NewConstraintSpec creates an empty constraint spec that will return all results 25 at a time.
