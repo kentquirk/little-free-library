@@ -3,6 +3,7 @@ package main
 
 import (
 	"compress/bzip2"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -77,26 +78,32 @@ func load(svc *service) {
 		defer f.Close()
 	}
 
+	// If it's a .bz2 file, unzip it
 	if strings.HasSuffix(resourcename, ".bz2") {
 		rdr = bzip2.NewReader(rdr)
 		resourcename = resourcename[:len(resourcename)-4]
 	}
 
+	// or if it's a .gz file, unzip it
+	if strings.HasSuffix(resourcename, ".gz") {
+		var err error
+		rdr, err = gzip.NewReader(rdr)
+		if err != nil {
+			log.Fatalf("couldn't unpack gzip: %v", err)
+		}
+		resourcename = resourcename[:len(resourcename)-3]
+	}
+
 	log.Printf("beginning book loading\n")
 	count := 0
 	starttime := time.Now()
+	r := rdf.NewLoader(rdr)
+	r.AddETextFilter(books.LanguageFilter(svc.Config.Languages...))
+	r.AddPGFileFilter(books.ContentFilter(svc.Config.Formats...))
 	if strings.HasSuffix(resourcename, ".tar") {
-		r := rdf.NewLoader(rdr)
-		r.AddETextFilter(books.LanguageFilter(svc.Config.Languages...))
-		r.AddPGFileFilter(books.ContentFilter(svc.Config.Formats...))
 		count = r.LoadTar(svc.Books)
 	} else {
-		r := rdf.NewLoader(rdr)
-		r.AddETextFilter(books.LanguageFilter(svc.Config.Languages...))
-		r.AddPGFileFilter(books.ContentFilter(svc.Config.Formats...))
-
-		r.LoadBulk(svc.Books)
-		count++
+		count = r.LoadOne(svc.Books)
 	}
 	endtime := time.Now()
 	log.Printf("book loading complete -- %d files read, %d books in dataset, took %s.\n", count, svc.Books.NBooks(), endtime.Sub(starttime).String())

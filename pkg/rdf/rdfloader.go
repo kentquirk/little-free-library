@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"encoding/xml"
 	"io"
-	"io/ioutil"
 	"log"
 	"regexp"
 	"strconv"
@@ -202,21 +201,12 @@ func (r *Loader) AddPGFileFilter(f books.PGFileFilter) {
 	r.pgFileFilters = append(r.pgFileFilters, f)
 }
 
-// LoadBulk parses and loads the XML data within its contents, expecting the contents to
-// be a single file containing one or more EText entities.
-// It only returns the entities that pass the filters that have been set up
-// before calling load. If no filters are set up, this will return empty results!
-func (r *Loader) LoadBulk(bookdata *books.BookData) {
-	decoder := xml.NewDecoder(r.reader)
-
+// load is a helper function used by the Load functions
+func (r *Loader) load(rdr io.Reader) []books.EText {
 	var data xmlRdf
+	decoder := xml.NewDecoder(rdr)
 	if err := decoder.Decode(&data); err != nil {
 		log.Fatal(err)
-	}
-
-	// if there are no etextFilters, add a dummy one that passes everything
-	if len(r.etextFilters) == 0 {
-		r.AddETextFilter(func(*books.EText) bool { return true })
 	}
 
 	// Go through the etexts and keep the ones that pass the filter
@@ -243,21 +233,37 @@ func (r *Loader) LoadBulk(bookdata *books.BookData) {
 			}
 		}
 	}
-
-	bookdata.Update(etexts)
+	return etexts
 }
 
-// LoadTar loads from a reader, expecting the reader to be a tar file that contains lots of files of books
-// It returns the number of files that were processed within the tar, and replaces the bookdata's contents.
-func (r *Loader) LoadTar(bookdata *books.BookData) int {
-	count := 0
-	tr := tar.NewReader(r.reader)
-	etexts := make([]books.EText, 0)
+// LoadOne parses and loads the XML data within its contents, expecting the contents to
+// be a single file containing one or more EText entities.
+// It only returns the entities that pass the filters that have been set up
+// before calling load.
+// Returns 1 (the number of files processed).
+func (r *Loader) LoadOne(bookdata *books.BookData) int {
 	// if there are no etextFilters, add a dummy one that passes everything
 	if len(r.etextFilters) == 0 {
 		r.AddETextFilter(func(*books.EText) bool { return true })
 	}
 
+	// Go through the etexts and keep the ones that pass the filter
+	etexts := r.load(r.reader)
+	bookdata.Update(etexts)
+	return 1
+}
+
+// LoadTar loads from a reader, expecting the reader to be a tar file that contains lots of files of books
+// It returns the number of files that were processed within the tar, and replaces the bookdata's contents.
+func (r *Loader) LoadTar(bookdata *books.BookData) int {
+	// if there are no etextFilters, add a dummy one that passes everything
+	if len(r.etextFilters) == 0 {
+		r.AddETextFilter(func(*books.EText) bool { return true })
+	}
+
+	count := 0
+	tr := tar.NewReader(r.reader)
+	etexts := make([]books.EText, 0)
 	for {
 		_, err := tr.Next()
 		if err == io.EOF {
@@ -266,40 +272,9 @@ func (r *Loader) LoadTar(bookdata *books.BookData) int {
 		if err != nil {
 			log.Fatalf("Count=%d, err=%v", count, err)
 		}
-		var rdfData xmlRdf
-		buf, err := ioutil.ReadAll(tr)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := xml.Unmarshal(buf, &rdfData); err != nil {
-			log.Fatal(err)
-		}
+		newtexts := r.load(tr)
+		etexts = append(etexts, newtexts...)
 		count++
-
-		// Go through the etexts (there's probably only one) and keep the ones that pass the filter
-		for i := range rdfData.Etexts {
-			et := rdfData.Etexts[i].asEText()
-			for _, filt := range r.etextFilters {
-				if !filt(&et) {
-					continue
-				}
-			eachfile:
-				for _, xf := range rdfData.Etexts[i].Formats {
-					file := xf.asFile()
-					for _, filt := range r.pgFileFilters {
-						if !filt(&file) {
-							continue eachfile
-						}
-					}
-					et.Files = append(et.Files, file)
-				}
-				// only store objects we have at least one file for
-				if len(et.Files) != 0 {
-					etexts = append(etexts, et)
-				}
-			}
-		}
 	}
 
 	bookdata.Update(etexts)
