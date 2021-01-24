@@ -46,30 +46,48 @@ type Config struct {
 	Formats         []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub"`
 	RefreshTime     time.Duration `env:"REFRESH_TIME" default:"23h17m"`
 	URL             string        `env:"URL" default:"/Users/kent/code/little-free-library/data/rdf-files.tar.bz2"`
+	LoadOnly        int           `env:"LOAD_ONLY"`
 	// URL             string        `env:"URL" default:"http://www.gutenberg.org/cache/epub/feeds/rdf-files.tar.bz2"`
 }
 
 func setupMiddleware(e *echo.Echo) {
-	// logging
-	e.Use(middleware.Logger())
-	// crash handling
-	e.Use(middleware.Recover())
+	e.Use(
+		// don't allow big bodies to choke us
+		middleware.BodyLimit("64K"),
+		// add a request ID
+		middleware.RequestID(),
+		// logging
+		middleware.Logger(),
+		// crash handling
+		middleware.Recover(),
+		// TODO: add rate limiter
+	)
 }
-
-var bookData *books.BookData = new(books.BookData)
 
 func load(svc *service) {
 	resourcename := svc.Config.URL
 	var rdr io.Reader
+
+	log.Printf("beginning book loading\n")
+	// if our URL is an http resource, fetch it with exponential fallback on retry
 	if strings.HasPrefix(resourcename, "http") {
-		resp, err := http.Get(resourcename)
-		if err != nil {
-			log.Fatalf("couldn't load from %s: %s", resourcename, err)
+		for retryTime, _ := time.ParseDuration("1s"); ; retryTime *= 2 {
+			resp, err := http.Get(resourcename)
+			log.Printf("Got %d fetching %s", resp.StatusCode, resourcename)
+			if err == nil && resp.StatusCode < 300 {
+				rdr = resp.Body
+				defer resp.Body.Close()
+				break
+			}
+			status := resp.Status
+			if err != nil {
+				status = err.Error()
+			}
+			log.Printf("load: couldn't fetch %s: %s -- will retry in %s", resourcename, status, retryTime)
+			time.Sleep(retryTime)
 		}
-		rdr = resp.Body
-		defer resp.Body.Close()
 	} else {
-		// it's a local file
+		// it's a local file; if it fails, don't retry, just die
 		f, err := os.Open(resourcename)
 		if err != nil {
 			log.Fatalf("couldn't load file %s: %s", resourcename, err)
@@ -78,6 +96,10 @@ func load(svc *service) {
 		defer f.Close()
 	}
 
+	// we've gotten to the point where we have something we can read, so let's plan to refresh whatever we get later
+	time.AfterFunc(svc.Config.RefreshTime, func() { load(svc) })
+
+	// OK, now we have fetched something.
 	// If it's a .bz2 file, unzip it
 	if strings.HasSuffix(resourcename, ".bz2") {
 		rdr = bzip2.NewReader(rdr)
@@ -89,20 +111,27 @@ func load(svc *service) {
 		var err error
 		rdr, err = gzip.NewReader(rdr)
 		if err != nil {
-			log.Fatalf("couldn't unpack gzip: %v", err)
+			log.Printf("couldn't unpack gzip: %v", err)
 		}
 		resourcename = resourcename[:len(resourcename)-3]
 	}
 
-	log.Printf("beginning book loading\n")
+	// now we have an uncompressed reader, we can start loading data from it
 	count := 0
 	starttime := time.Now()
-	r := rdf.NewLoader(rdr)
-	r.AddETextFilter(books.LanguageFilter(svc.Config.Languages...))
-	r.AddPGFileFilter(books.ContentFilter(svc.Config.Formats...))
+	r := rdf.NewLoader(rdr,
+		// We don't want to be delivering data that our users can't use, so we pre-filter the data that goes
+		// into the dataset. The target language(s) and target formats can be specified in the config, and
+		// only the data that meets these specifications will be saved.
+		rdf.ETextFilter(books.LanguageFilter(svc.Config.Languages...)),
+		rdf.PGFileFilter(books.ContentFilter(svc.Config.Formats...)),
+		rdf.LoadOnly(svc.Config.LoadOnly),
+	)
+
 	if strings.HasSuffix(resourcename, ".tar") {
 		count = r.LoadTar(svc.Books)
 	} else {
+		// this is mainly useful for testing and debugging without waiting for big files
 		count = r.LoadOne(svc.Books)
 	}
 	endtime := time.Now()

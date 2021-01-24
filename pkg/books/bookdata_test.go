@@ -221,7 +221,7 @@ func TestConstraint_matchCreator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pat, err := createRegex(tt.p)
 			if err != nil {
-				t.Errorf("createRegex returned error %e", err)
+				t.Errorf("createRegex returned error %v", err)
 			}
 			f := matchCreator(pat)
 			result := ""
@@ -251,7 +251,7 @@ func TestConstraint_matchIllustrator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pat, err := createRegex(tt.p)
 			if err != nil {
-				t.Errorf("createRegex returned error %e", err)
+				t.Errorf("createRegex returned error %v", err)
 			}
 			f := matchIllustrator(pat)
 			result := ""
@@ -281,7 +281,7 @@ func TestConstraint_matchSubject(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pat, err := createRegex(tt.p)
 			if err != nil {
-				t.Errorf("createRegex returned error %e", err)
+				t.Errorf("createRegex returned error %v", err)
 			}
 			f := matchSubject(pat)
 			result := ""
@@ -311,7 +311,7 @@ func TestConstraint_matchTitle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pat, err := createRegex(tt.p)
 			if err != nil {
-				t.Errorf("createRegex returned error %e", err)
+				t.Errorf("createRegex returned error %v", err)
 			}
 			f := matchTitle(pat)
 			result := ""

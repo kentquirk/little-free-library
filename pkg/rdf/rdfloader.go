@@ -181,24 +181,46 @@ type Loader struct {
 	reader        io.Reader
 	etextFilters  []books.ETextFilter
 	pgFileFilters []books.PGFileFilter
+	loadOnly      int
 }
 
-const bufsize = 4096
+// LoaderOption is the type of a function used to set loader options;
+// It modifies the Loader passed into it.
+type LoaderOption func(*Loader)
 
 // NewLoader constructs an RDF Loader from a reader.
-func NewLoader(r io.Reader) *Loader {
+func NewLoader(r io.Reader, options ...LoaderOption) *Loader {
 	loader := &Loader{reader: r}
+	for _, opt := range options {
+		opt(loader)
+	}
+	// if after this there are no etextFilters, add a dummy one that passes everything
+	if len(loader.etextFilters) == 0 {
+		loader.etextFilters = []books.ETextFilter{func(*books.EText) bool { return true }}
+	}
+
 	return loader
 }
 
-// AddETextFilter adds an ETextFilter
-func (r *Loader) AddETextFilter(f books.ETextFilter) {
-	r.etextFilters = append(r.etextFilters, f)
+// ETextFilter returns a LoaderOption that adds an ETextFilter
+func ETextFilter(f books.ETextFilter) LoaderOption {
+	return func(ldr *Loader) {
+		ldr.etextFilters = append(ldr.etextFilters, f)
+	}
 }
 
-// AddPGFileFilter adds a PGFileFilter
-func (r *Loader) AddPGFileFilter(f books.PGFileFilter) {
-	r.pgFileFilters = append(r.pgFileFilters, f)
+// PGFileFilter returns a LoaderOption that adds a PGFileFilter
+func PGFileFilter(f books.PGFileFilter) LoaderOption {
+	return func(ldr *Loader) {
+		ldr.pgFileFilters = append(ldr.pgFileFilters, f)
+	}
+}
+
+// LoadOnly returns a LoaderOptions that limits the number of items loaded
+func LoadOnly(n int) LoaderOption {
+	return func(ldr *Loader) {
+		ldr.loadOnly = n
+	}
 }
 
 // load is a helper function used by the Load functions
@@ -242,11 +264,6 @@ func (r *Loader) load(rdr io.Reader) []books.EText {
 // before calling load.
 // Returns 1 (the number of files processed).
 func (r *Loader) LoadOne(bookdata *books.BookData) int {
-	// if there are no etextFilters, add a dummy one that passes everything
-	if len(r.etextFilters) == 0 {
-		r.AddETextFilter(func(*books.EText) bool { return true })
-	}
-
 	// Go through the etexts and keep the ones that pass the filter
 	etexts := r.load(r.reader)
 	bookdata.Update(etexts)
@@ -256,11 +273,6 @@ func (r *Loader) LoadOne(bookdata *books.BookData) int {
 // LoadTar loads from a reader, expecting the reader to be a tar file that contains lots of files of books
 // It returns the number of files that were processed within the tar, and replaces the bookdata's contents.
 func (r *Loader) LoadTar(bookdata *books.BookData) int {
-	// if there are no etextFilters, add a dummy one that passes everything
-	if len(r.etextFilters) == 0 {
-		r.AddETextFilter(func(*books.EText) bool { return true })
-	}
-
 	count := 0
 	tr := tar.NewReader(r.reader)
 	etexts := make([]books.EText, 0)
@@ -275,6 +287,9 @@ func (r *Loader) LoadTar(bookdata *books.BookData) int {
 		newtexts := r.load(tr)
 		etexts = append(etexts, newtexts...)
 		count++
+		if r.loadOnly > 0 && len(etexts) >= r.loadOnly {
+			break // end early because loadOnly
+		}
 	}
 
 	bookdata.Update(etexts)

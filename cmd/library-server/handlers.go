@@ -152,7 +152,7 @@ func (svc *service) bookQuery(c echo.Context) error {
 			default:
 				constraint, exclude, err := books.ConstraintFromText(k, v)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusBadRequest, "constraint error: %e", err)
+					return echo.NewHTTPError(http.StatusBadRequest, "constraint error: %v", err)
 				}
 				if exclude {
 					constraints.Excludes = append(constraints.Excludes, constraint)
