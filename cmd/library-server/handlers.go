@@ -166,15 +166,16 @@ func (svc *service) bookQuery(c echo.Context) error {
 			}
 		}
 	}
+
 	// ok, we have a constraint spec -- execute it
 	// this same handler gets used for query and count
+	var result interface{}
 	if strings.HasSuffix(c.Path(), "query") {
-		result := svc.Books.Query(constraints)
-		return c.JSON(http.StatusOK, result)
+		result = svc.Books.Query(constraints)
 	} else {
-		result := svc.Books.Count(constraints)
-		return c.JSON(http.StatusOK, result)
+		result = svc.Books.Count(constraints)
 	}
+	return c.JSON(http.StatusOK, result)
 }
 
 func (svc *service) bookSummary(c echo.Context) error {
