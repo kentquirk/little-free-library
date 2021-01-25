@@ -1,5 +1,7 @@
-# qrserver
-Provides a simple QR code generator API -- a GET request to a URL gets you a QR code .PNG file.
+# Little Free Library
+Provides the support for the Digital Little Free Library project, which is a frontend for Project Gutenberg.
+
+More to come as I develop this.
 
 ## Design Notes
 
@@ -29,8 +31,7 @@ Provides a simple QR code generator API -- a GET request to a URL gets you a QR 
 
 ### Reading the data from Project Gutenberg
 
-[This file](rdfloader.go) contains the code to load an "RDF" file which is a specific format of XML that is used by Project Gutenberg.
+[This package](pkg/rdf) contains the code to load an "RDF" file which is a specific format of XML that is used by Project Gutenberg.
 [The offline catalogs page](http://www.gutenberg.org/ebooks/offline_catalogs.html) requests that this format be the one used for fetching data for offline uses.
 
-# TODO
-* move data stuff to its own package
+
