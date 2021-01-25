@@ -1,0 +1,23 @@
+html {
+	height: 100%;
+}
+body {
+	color: black;
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	font-size: larger;
+}
+a {
+	color: #009900;
+}
+
+.container {
+	flex-direction: column;
+}
+
+.item {
+	flex-direction: row;
+	flex-wrap: wrap;
+}

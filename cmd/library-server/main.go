@@ -6,12 +6,14 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	htmltmpl "html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
+	texttmpl "text/template"
 	"time"
 
 	"github.com/codingconcepts/env"
@@ -26,7 +28,8 @@ import (
 // They are:
 // PORT (required). Specifies the port number. If the port number is 443, we automatically do a TLS setup and
 //   get a certificate from Let's Encrypt. Otherwise, we just do a normal HTTP setup.
-// CACHEDIR (default:"/var/www/.cache"). Specifies where on disk the cache information for TLS/Let's Encrypt is stored.
+// CACHE_DIR (default:"/var/www/.cache"). Specifies where on disk the cache information for TLS/Let's Encrypt is stored.
+// STATIC_ROOT (no default). Specifies the path that should be statically served. There is no safe default.
 // MAXLIMIT (default 100). The maximum number of items that can be returned at once, even if the query
 //   specifies a limit value.
 // SHUTDOWN_TIMEOUT (default 5s): maximum time the server will wait to try to shutdown nicely when interrupted.
@@ -37,8 +40,10 @@ import (
 // REFRESH_TIME (default 23h17m to avoid hitting the servers at the same time every day. This is the frequency
 //   at which the data is refreshed by downloading it from Project Gutenberg.
 // URL. The URL used to fetch catalog.rdf.zip from Project Gutenberg.
+// LOAD_ONLY. If this is a nonzero number, the system will load no more than this many books. Useful for debugging.
 type Config struct {
-	CacheDir        string        `env:"CACHEDIR" default:"/var/www/.cache"`
+	CacheDir        string        `env:"CACHE_DIR" default:"/var/www/.cache"`
+	StaticRoot      string        `env:"STATIC_ROOT" required:"true"`
 	Port            int           `env:"PORT" required:"true"`
 	MaxLimit        int           `env:"MAXLIMIT" default:"100"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" default:"5s"`
@@ -66,6 +71,21 @@ func setupMiddleware(e *echo.Echo) {
 		middleware.Recover(),
 		// TODO: add rate limiter
 	)
+}
+
+type service struct {
+	Config        Config
+	Books         *books.BookData
+	HTMLTemplates map[string]*htmltmpl.Template
+	TextTemplates map[string]*texttmpl.Template
+}
+
+func newService() *service {
+	svc := &service{
+		Books: books.NewBookData(),
+	}
+	svc.loadTemplates()
+	return svc
 }
 
 func load(svc *service) {
@@ -156,8 +176,8 @@ func main() {
 	e.AutoTLSManager.Cache = autocert.DirCache(svc.Config.CacheDir)
 
 	setupMiddleware(e)
-
 	svc.setupRoutes(e)
+	e.Renderer = svc
 
 	// If the port is the SSL port, then do a TLS setup, otherwise just do normal HTTP
 	startfunc := e.Start

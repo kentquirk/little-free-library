@@ -23,17 +23,6 @@ func parseIntWithDefault(input string, def int) (int, error) {
 	return n, nil
 }
 
-type service struct {
-	Config Config
-	Books  *books.BookData
-}
-
-func newService() *service {
-	return &service{
-		Books: books.NewBookData(),
-	}
-}
-
 func (svc *service) setupRoutes(e *echo.Echo) {
 	// Routes
 	e.GET("/", svc.err400)
@@ -41,10 +30,13 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/health", svc.health)
 	e.GET("/books/query", svc.bookQuery)
 	e.GET("/books/count", svc.bookCount)
+	e.GET("/books/query/html/:format", svc.bookQueryHTML)
 	e.GET("/books/summary", svc.bookSummary)
 	e.GET("/details/:id", svc.bookDetails)
 	e.GET("/qr/:id", svc.qrcodegen)
 	e.GET("/book/:id", svc.bookByID)
+
+	e.Static("/static", svc.Config.StaticRoot)
 }
 
 // err400 returns 400 and is used to discourage random queries
@@ -185,6 +177,17 @@ func (svc *service) bookCount(c echo.Context) error {
 	}
 	result := svc.Books.Count(constraints)
 	return c.JSON(http.StatusOK, result)
+}
+
+// bookQueryHTML does a book query based on a query specification and then
+// runs the result through an HTML template.
+func (svc *service) bookQueryHTML(c echo.Context) error {
+	constraints, err := svc.buildConstraints(c.QueryParams())
+	if err != nil {
+		return err
+	}
+	result := svc.Books.Query(constraints)
+	return c.Render(http.StatusOK, c.Param("format"), result)
 }
 
 func (svc *service) bookSummary(c echo.Context) error {

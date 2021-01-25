@@ -36,6 +36,15 @@ type EBook struct {
 	Agents          map[string]Agent `json:"agents,omitempty"`
 }
 
+// FullCreators is a helper function for templates to extract the creator name(s)
+func (e *EBook) FullCreators() []Agent {
+	var agents []Agent
+	for _, agent := range e.Creators {
+		agents = append(agents, e.Agents[agent])
+	}
+	return agents
+}
+
 // Agent is a record for a human (Project Gutenberg calls these agents).
 // This can be an author, editor, or illustrator.
 type Agent struct {
