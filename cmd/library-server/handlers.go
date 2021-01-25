@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/kentquirk/little-free-library/pkg/books"
 	"github.com/labstack/echo/v4"
@@ -40,7 +40,7 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/doc", svc.doc)
 	e.GET("/health", svc.health)
 	e.GET("/books/query", svc.bookQuery)
-	e.GET("/books/count", svc.bookQuery) // yes, the same function
+	e.GET("/books/count", svc.bookCount)
 	e.GET("/books/summary", svc.bookSummary)
 	e.GET("/details/:id", svc.bookDetails)
 	e.GET("/qr/:id", svc.qrcodegen)
@@ -120,11 +120,8 @@ func (svc *service) bookDetails(c echo.Context) error {
 	return c.String(http.StatusOK, "Ok\n")
 }
 
-// bookQuery does a book query based on a query specification.
-func (svc *service) bookQuery(c echo.Context) error {
-	values := c.QueryParams()
+func (svc *service) buildConstraints(values url.Values) (*books.ConstraintSpec, error) {
 	constraints := books.NewConstraintSpec()
-
 	for k, vals := range values {
 		// once for each copy of a given key
 		for _, v := range vals {
@@ -142,13 +139,13 @@ func (svc *service) bookQuery(c echo.Context) error {
 				if n > 0 && n <= svc.Config.MaxLimit {
 					constraints.Limit = n
 				} else {
-					return echo.NewHTTPError(http.StatusBadRequest,
+					return nil, echo.NewHTTPError(http.StatusBadRequest,
 						fmt.Sprintf("limit must be >0 and <=%d", svc.Config.MaxLimit))
 				}
 			case "page", "pg":
 				n, err := strconv.Atoi(v)
 				if err != nil || n < 0 {
-					return echo.NewHTTPError(http.StatusBadRequest, "page must be numeric and >0")
+					return nil, echo.NewHTTPError(http.StatusBadRequest, "page must be numeric and >0")
 				}
 				constraints.Page = n
 			case "random", "rand":
@@ -156,7 +153,7 @@ func (svc *service) bookQuery(c echo.Context) error {
 			default:
 				constraint, exclude, err := books.ConstraintFromText(k, v)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusBadRequest, "constraint error: %v", err)
+					return nil, echo.NewHTTPError(http.StatusBadRequest, "constraint error: %v", err)
 				}
 				if exclude {
 					constraints.Excludes = append(constraints.Excludes, constraint)
@@ -166,15 +163,27 @@ func (svc *service) bookQuery(c echo.Context) error {
 			}
 		}
 	}
+	return constraints, nil
+}
 
-	// ok, we have a constraint spec -- execute it
-	// this same handler gets used for query and count
-	var result interface{}
-	if strings.HasSuffix(c.Path(), "query") {
-		result = svc.Books.Query(constraints)
-	} else {
-		result = svc.Books.Count(constraints)
+// bookQuery does a book query based on a query specification.
+func (svc *service) bookQuery(c echo.Context) error {
+	constraints, err := svc.buildConstraints(c.QueryParams())
+	if err != nil {
+		return err
 	}
+	result := svc.Books.Query(constraints)
+	return c.JSON(http.StatusOK, result)
+}
+
+// bookCount does a book query based on a query specification and returns the
+// number of items that would result from that query.
+func (svc *service) bookCount(c echo.Context) error {
+	constraints, err := svc.buildConstraints(c.QueryParams())
+	if err != nil {
+		return err
+	}
+	result := svc.Books.Count(constraints)
 	return c.JSON(http.StatusOK, result)
 }
 
