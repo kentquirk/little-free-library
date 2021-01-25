@@ -41,21 +41,23 @@ import (
 //   at which the data is refreshed by downloading it from Project Gutenberg.
 // URL. The URL used to fetch catalog.rdf.zip from Project Gutenberg.
 // LOAD_ONLY. If this is a nonzero number, the system will load no more than this many books. Useful for debugging.
+// NO_CACHE_TEMPLATES. If this is true, templates will be reloaded on every fetch (useful for editing templates).
 type Config struct {
-	CacheDir        string        `env:"CACHE_DIR" default:"/var/www/.cache"`
-	StaticRoot      string        `env:"STATIC_ROOT" required:"true"`
-	Port            int           `env:"PORT" required:"true"`
-	MaxLimit        int           `env:"MAXLIMIT" default:"100"`
-	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" default:"5s"`
-	Languages       []string      `env:"LANGUAGES" delimiter:"," default:"en"`
-	Formats         []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub"`
-	RefreshTime     time.Duration `env:"REFRESH_TIME" default:"23h17m"`
-	URL             string        `env:"URL" default:"/Users/kent/code/little-free-library/data/rdf-files.tar.bz2"`
-	LoadOnly        int           `env:"LOAD_ONLY"`
+	CacheDir         string        `env:"CACHE_DIR" default:"/var/www/.cache"`
+	StaticRoot       string        `env:"STATIC_ROOT" required:"true"`
+	Port             int           `env:"PORT" required:"true"`
+	MaxLimit         int           `env:"MAXLIMIT" default:"100"`
+	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" default:"5s"`
+	Languages        []string      `env:"LANGUAGES" delimiter:"," default:"en"`
+	Formats          []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub"`
+	RefreshTime      time.Duration `env:"REFRESH_TIME" default:"23h17m"`
+	URL              string        `env:"URL" default:"/Users/kent/code/little-free-library/data/rdf-files.tar.bz2"`
+	LoadOnly         int           `env:"LOAD_ONLY"`
+	NoCacheTemplates bool          `env:"NO_CACHE_TEMPLATES"`
 	// This is the URL that is current for the latest catalog at gutenberg.org as of January 2021. Please do not
 	// use it for testing; download a local copy. Only use this URL once you are confident that your code is running
 	// properly and will not spam the server with requests. Best to leave the default value as a local file and override
-	// it in your server configuration.
+	// it in your production server configuration.
 	// URL             string        `env:"URL" default:"http://www.gutenberg.org/cache/epub/feeds/rdf-files.tar.bz2"`
 }
 
@@ -84,7 +86,6 @@ func newService() *service {
 	svc := &service{
 		Books: books.NewBookData(),
 	}
-	svc.loadTemplates()
 	return svc
 }
 
