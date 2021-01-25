@@ -8,31 +8,43 @@ import (
 // PGFile is the parsed and processed structure of an xmlFile object
 // within the Project Gutenberg data.
 type PGFile struct {
-	Location   string    `json:"location,omitempty"`
-	Formats    []string  `json:"formats,omitempty"`
-	FileSize   int       `json:"filesize,omitempty"`
-	Modified   time.Time `json:"-"`
-	IsFormatOf string    `json:"isformatof,omitempty"`
+	Location   string   `json:"location,omitempty"`
+	Formats    []string `json:"formats,omitempty"`
+	FileSize   int      `json:"filesize,omitempty"`
+	Modified   Date     `json:"modified,omitempty"`
+	IsFormatOf string   `json:"isformatof,omitempty"`
 }
 
 // EBook is the parsed and processed structure of an ebook object as defined in the XML.
 type EBook struct {
-	ID              string    `json:"id,omitempty"`
-	Publisher       string    `json:"publisher,omitempty"`
-	Title           string    `json:"title,omitempty"`
-	Creators        []string  `json:"creators,omitempty"`
-	Illustrators    []string  `json:"illustrators,omitempty"`
-	TableOfContents string    `json:"table_of_contents,omitempty"`
-	Language        string    `json:"language,omitempty"`
-	Subjects        []string  `json:"subjects,omitempty"`
-	Issued          time.Time `json:"issued,omitempty"`
-	DownloadCount   int       `json:"download_count,omitempty"`
-	Rights          string    `json:"rights,omitempty"`
-	Copyright       string    `json:"copyright,omitempty"`
-	CopyrightYears  []int     `json:"-"`
-	Edition         string    `json:"edition,omitempty"`
-	Type            string    `json:"type,omitempty"`
-	Files           []PGFile  `json:"files,omitempty"`
+	ID              string           `json:"id,omitempty"`
+	Publisher       string           `json:"publisher,omitempty"`
+	Title           string           `json:"title,omitempty"`
+	Creators        []string         `json:"creators,omitempty"`
+	Illustrators    []string         `json:"illustrators,omitempty"`
+	TableOfContents string           `json:"table_of_contents,omitempty"`
+	Language        string           `json:"language,omitempty"`
+	Subjects        []string         `json:"subjects,omitempty"`
+	Issued          Date             `json:"issued,omitempty"`
+	DownloadCount   int              `json:"download_count,omitempty"`
+	Rights          string           `json:"rights,omitempty"`
+	Copyright       string           `json:"copyright,omitempty"`
+	CopyrightDates  []Date           `json:"-"`
+	Edition         string           `json:"edition,omitempty"`
+	Type            string           `json:"type,omitempty"`
+	Files           []PGFile         `json:"files,omitempty"`
+	Agents          map[string]Agent `json:"agents,omitempty"`
+}
+
+// Agent is a record for a human (Project Gutenberg calls these agents).
+// This can be an author, editor, or illustrator.
+type Agent struct {
+	ID        string   `json:"id,omitempty"`
+	Name      string   `json:"name,omitempty"`
+	Aliases   []string `json:"aliases,omitempty"`
+	BirthDate Date     `json:"birth_date,omitempty"`
+	DeathDate Date     `json:"death_date,omitempty"`
+	Webpages  []string `json:"webpages,omitempty"`
 }
 
 // BookData is the type that we use to contain the book data and wrap all the queries.
@@ -108,10 +120,13 @@ func (b *BookData) Summary() SummaryData {
 // Query does a query against the book data according to a ConstraintSpec.
 // If the random flag is set, we choose a random subset of matching items.
 //
-// To choose n out of a stream of items, read the items one at a time. Keep
-// the first n items in a set S.
-// Now when reading the m-th item I (m>n now), keep it with probability n/m.
-// If you do keep it, select an item U uniformly at random from S, and replace
+// We want to select items fairly, so we use a replacement algorithm
+// that adjusts the replacement probability based on the number of items
+// that we have already seen.
+// To choose n out of a stream of items, we generate the items one at a time,
+// keeping the first n items in a set S.
+// Then, when reading the m-th item I (m>n now), we keep it with probability n/m.
+// When we keep it, we select item U uniformly at random from S, and replace
 // U with I.
 func (b *BookData) Query(constraints *ConstraintSpec) []EBook {
 	result := make([]EBook, 0)

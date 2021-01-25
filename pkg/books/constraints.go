@@ -92,7 +92,7 @@ outer:
 
 	retfunc := nilFunctor
 	switch name {
-	case "author":
+	case "author", "auth":
 		if useRegexp {
 			retfunc = matchCreator(pat)
 		} else {
@@ -105,7 +105,7 @@ outer:
 		} else {
 			retfunc = testIllustrator(value)
 		}
-	case "creator":
+	case "creator", "cre":
 		if useRegexp {
 			retfunc = Or(matchCreator(pat), matchIllustrator(pat))
 		} else {
@@ -117,17 +117,23 @@ outer:
 		} else {
 			retfunc = testTitle(value)
 		}
-	case "subject":
+	case "subject", "subj":
 		if useRegexp {
 			retfunc = matchSubject(pat)
 		} else {
 			retfunc = testSubject(value)
 		}
-	case "topic":
+	case "topic", "top":
 		if useRegexp {
 			retfunc = Or(matchTitle(pat), matchSubject(pat))
 		} else {
 			retfunc = Or(testTitle(value), testSubject(value))
+		}
+	case "type", "typ":
+		if useRegexp {
+			retfunc = matchType(pat)
+		} else {
+			retfunc = testType(value)
 		}
 	case "any":
 		if useRegexp {
@@ -135,14 +141,21 @@ outer:
 		} else {
 			retfunc = Or(testCreator(value), testIllustrator(value), testTitle(value), testSubject(value))
 		}
-	case "language":
+	case "language", "lang":
 		retfunc = testLanguage(value)
-	case "year":
+	case "issued", "iss":
 		splits := strings.Split(value, "-")
 		if len(splits) == 1 {
-			retfunc = testYear(splits[0], yearEQ)
+			retfunc = testIssued(splits[0], yearEQ)
 		} else if len(splits) == 2 {
-			retfunc = And(testYear(splits[0], yearGE), testYear(splits[1], yearLE))
+			retfunc = And(testIssued(splits[0], yearGE), testIssued(splits[1], yearLE))
+		}
+	case "copyright", "cop", "copr":
+		splits := strings.Split(value, "-")
+		if len(splits) == 1 {
+			retfunc = testCopyright(splits[0], yearEQ)
+		} else if len(splits) == 2 {
+			retfunc = And(testCopyright(splits[0], yearGE), testCopyright(splits[1], yearLE))
 		}
 	default:
 		return retfunc, false, errors.New("bad constraint definition")

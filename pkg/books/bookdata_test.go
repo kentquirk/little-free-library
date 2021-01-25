@@ -2,7 +2,6 @@ package books
 
 import (
 	"testing"
-	"time"
 )
 
 // We don't need all the fields for our testing
@@ -14,7 +13,7 @@ func testEBook() []EBook {
 			Creators: []string{"Evelyn Excellent"},
 			Language: "en",
 			Subjects: []string{"Biography"},
-			Issued:   time.Date(2005, 7, 18, 0, 0, 0, 0, time.UTC),
+			Issued:   Date{2005, 7, 18},
 		},
 		{
 			ID:       "h",
@@ -22,7 +21,7 @@ func testEBook() []EBook {
 			Creators: []string{"Lin-Manuel Miranda"},
 			Language: "rap",
 			Subjects: []string{"History - Fiction", "History - Play", "Musical"},
-			Issued:   time.Date(2016, 12, 25, 0, 0, 0, 0, time.UTC),
+			Issued:   Date{2016, 12, 25},
 		},
 		{
 			ID:           "w",
@@ -30,7 +29,7 @@ func testEBook() []EBook {
 			Illustrators: []string{"Lynda Carter", "Gal Gadot"},
 			Language:     "en",
 			Subjects:     []string{"Comics -- Fiction"},
-			Issued:       time.Date(2018, 10, 10, 0, 0, 0, 0, time.UTC),
+			Issued:       Date{2018, 10, 10},
 		},
 		{
 			ID:       "e",
@@ -38,7 +37,7 @@ func testEBook() []EBook {
 			Creators: []string{"Eve"},
 			Language: "en",
 			Subjects: []string{"Music", "Religion"},
-			Issued:   time.Date(1998, 1, 1, 0, 0, 0, 0, time.UTC),
+			Issued:   Date{1998, 1, 1},
 		},
 	}
 }
@@ -191,7 +190,7 @@ func TestConstraint_testYear(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := testYear(tt.year, tt.comp)
+			f := testIssued(tt.year, tt.comp)
 			result := ""
 			for _, book := range data {
 				if f(book) {

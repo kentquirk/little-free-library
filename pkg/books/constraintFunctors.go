@@ -3,7 +3,6 @@ package books
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -64,8 +63,13 @@ func testCreator(value string) ConstraintFunctor {
 func matchCreator(pat *regexp.Regexp) ConstraintFunctor {
 	return func(et EBook) bool {
 		for _, s := range et.Creators {
-			if pat.MatchString(s) {
+			if pat.MatchString(et.Agents[s].Name) {
 				return true
+			}
+			for _, a := range et.Agents[s].Aliases {
+				if pat.MatchString(a) {
+					return true
+				}
 			}
 		}
 		return false
@@ -83,8 +87,13 @@ func testIllustrator(value string) ConstraintFunctor {
 func matchIllustrator(pat *regexp.Regexp) ConstraintFunctor {
 	return func(et EBook) bool {
 		for _, s := range et.Illustrators {
-			if pat.MatchString(s) {
+			if pat.MatchString(et.Agents[s].Name) {
 				return true
+			}
+			for _, a := range et.Agents[s].Aliases {
+				if pat.MatchString(a) {
+					return true
+				}
 			}
 		}
 		return false
@@ -124,6 +133,20 @@ func matchTitle(pat *regexp.Regexp) ConstraintFunctor {
 	}
 }
 
+func testType(value string) ConstraintFunctor {
+	pat, err := regexp.Compile(fmt.Sprintf(`(?is:\b%s\b)`, value))
+	if err != nil {
+		return nilFunctor
+	}
+	return matchType(pat)
+}
+
+func matchType(pat *regexp.Regexp) ConstraintFunctor {
+	return func(et EBook) bool {
+		return pat.MatchString(et.Type)
+	}
+}
+
 // tests languages for exact equality, and allows multiple languages
 // separated by period (.)
 func testLanguage(value string) ConstraintFunctor {
@@ -147,22 +170,53 @@ const (
 	yearLE yearComparison = iota
 )
 
-// testYear checks the book's Issued date
-func testYear(value string, cmp yearComparison) ConstraintFunctor {
+// testIssued checks the book's Issued date
+func testIssued(value string, cmp yearComparison) ConstraintFunctor {
 	if value == "" {
 		return func(et EBook) bool { return true }
 	}
 	return func(et EBook) bool {
-		y, _ := strconv.Atoi(value)
+		d, _ := ParseDate(value)
 		switch cmp {
 		case yearEQ:
-			return et.Issued.Year() == y
+			return et.Issued.CompareTo(d) == 0
 		case yearGE:
-			return et.Issued.Year() >= y
+			return et.Issued.CompareTo(d) >= 0
 		case yearLE:
-			return et.Issued.Year() <= y
+			return et.Issued.CompareTo(d) <= 0
 		default:
 			return false
 		}
+	}
+}
+
+// testCopyright checks the copyright dates; if any of the dates in
+// CopyrightDates fits the comparison, the result is true
+func testCopyright(value string, cmp yearComparison) ConstraintFunctor {
+	if value == "" {
+		return func(et EBook) bool { return true }
+	}
+	return func(et EBook) bool {
+		if len(et.CopyrightDates) == 0 {
+			return false
+		}
+		d, _ := ParseDate(value)
+		for _, cd := range et.CopyrightDates {
+			switch cmp {
+			case yearEQ:
+				if cd.CompareTo(d) == 0 {
+					return true
+				}
+			case yearGE:
+				if cd.CompareTo(d) >= 0 {
+					return true
+				}
+			case yearLE:
+				if cd.CompareTo(d) <= 0 {
+					return true
+				}
+			}
+		}
+		return false
 	}
 }

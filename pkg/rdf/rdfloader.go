@@ -5,10 +5,7 @@ import (
 	"encoding/xml"
 	"io"
 	"log"
-	"regexp"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/kentquirk/little-free-library/pkg/books"
 )
@@ -97,6 +94,29 @@ type xmlFile struct {
 
 const xmlDateFormat = "2006-01-02"
 
+func mustDate(s string) books.Date {
+	if date, ix := books.ParseDate(s); ix != 0 {
+		return date
+	}
+	return books.Date{}
+}
+
+// asAgent generates an Agent from an xmlAgent
+func (x *xmlAgent) asAgent() books.Agent {
+	agent := books.Agent{
+		ID:        x.ID,
+		Name:      x.Name,
+		Aliases:   x.Alias,
+		BirthDate: mustDate(x.Birthdate.Text),
+		DeathDate: mustDate(x.Deathdate.Text),
+		Webpages:  make([]string, 0),
+	}
+	for _, wp := range x.Webpage {
+		agent.Webpages = append(agent.Webpages, wp.Resource)
+	}
+	return agent
+}
+
 // asEBook generates an EBook from an xmlEBook
 func (x *xmlEbook) asEBook() books.EBook {
 	et := books.EBook{
@@ -110,32 +130,26 @@ func (x *xmlEbook) asEBook() books.EBook {
 		DownloadCount:   x.Downloads,
 		Rights:          x.Rights,
 		Copyright:       x.Copyright,
-		CopyrightYears:  make([]int, 0, 0),
+		CopyrightDates:  books.ParseAllDates(x.Copyright),
 		Edition:         x.Edition,
 		Type:            x.Type,
 		Files:           make([]books.PGFile, 0, 4),
+		Agents:          make(map[string]books.Agent),
 	}
 	for i := range x.Creators {
 		et.Creators = append(et.Creators, x.Creators[i].ID)
+		et.Agents[x.Creators[i].ID] = x.Creators[i].asAgent()
 	}
 	for i := range x.Illustrators {
 		et.Illustrators = append(et.Illustrators, x.Illustrators[i].ID)
+		et.Agents[x.Illustrators[i].ID] = x.Illustrators[i].asAgent()
 	}
 	for i := range x.Subjects {
 		if strings.HasSuffix(x.Subjects[i].Description.MemberOf.Resource, "LCSH") {
 			et.Subjects = append(et.Subjects, x.Subjects[i].Description.Subject)
 		}
 	}
-	if len(x.Copyright) > 4 {
-		p := regexp.MustCompile("[12][0-9]{3}")
-		years := p.FindAllString(x.Copyright, -1)
-		for _, y := range years {
-			year, _ := strconv.Atoi(y)
-			et.CopyrightYears = append(et.CopyrightYears, year)
-		}
-	}
-	// TODO: log if this gets an error
-	et.Issued, _ = time.Parse(xmlDateFormat, x.Issued)
+	et.Issued, _ = books.ParseDate(x.Issued)
 	return et
 }
 
@@ -146,7 +160,7 @@ func (x *xmlFile) asFile() books.PGFile {
 		FileSize:   x.Extent,
 		IsFormatOf: x.IsFormatOf.Resource,
 	}
-	f.Modified, _ = time.Parse(xmlDateFormat, x.Modified)
+	f.Modified, _ = books.ParseDate(x.Modified)
 
 	return f
 }
@@ -234,6 +248,7 @@ func (r *Loader) load(rdr io.Reader) []books.EBook {
 			// only store objects we have files for
 			if len(et.Files) != 0 {
 				ebooks = append(ebooks, et)
+				// agents =
 			}
 		}
 	}
