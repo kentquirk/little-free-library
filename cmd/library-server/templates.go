@@ -25,7 +25,7 @@ func (svc *service) Render(w io.Writer, name string, data interface{}, c echo.Co
 
 	tmpl, ok := svc.HTMLTemplates[name]
 	if !ok || svc.Config.NoCacheTemplates {
-		f, err := os.Open(fmt.Sprintf("./data/%s.tmpl", name))
+		f, err := os.Open(fmt.Sprintf("./templates/html/%s.tmpl", name))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "couldn't find template "+name)
 		}

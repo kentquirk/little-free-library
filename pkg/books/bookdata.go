@@ -97,18 +97,18 @@ func (b *BookData) Get(id string) (EBook, bool) {
 	return EBook{}, false
 }
 
-// SummaryData is the data structure used to return collection-level information
+// StatsData is the data structure used to return collection-level information
 // about the data on hand.
-type SummaryData struct {
+type StatsData struct {
 	TotalBooks int            `json:"total_books"`
 	TotalFiles int            `json:"total_files"`
 	Languages  map[string]int `json:"languages"`
 	Formats    map[string]int `json:"formats"`
 }
 
-// Summary returns aggregated information about the data being stored.
-func (b *BookData) Summary() SummaryData {
-	sd := SummaryData{
+// Stats returns aggregated information about the data being stored.
+func (b *BookData) Stats() StatsData {
+	sd := StatsData{
 		Languages: make(map[string]int),
 		Formats:   make(map[string]int),
 	}

@@ -84,7 +84,9 @@ type service struct {
 
 func newService() *service {
 	svc := &service{
-		Books: books.NewBookData(),
+		Books:         books.NewBookData(),
+		HTMLTemplates: make(map[string]*htmltmpl.Template),
+		TextTemplates: make(map[string]*texttmpl.Template),
 	}
 	return svc
 }

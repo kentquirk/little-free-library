@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/kentquirk/little-free-library/pkg/books"
 	"github.com/labstack/echo/v4"
@@ -31,10 +32,10 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/books/query", svc.bookQuery)
 	e.GET("/books/count", svc.bookCount)
 	e.GET("/books/query/html/:format", svc.bookQueryHTML)
-	e.GET("/books/summary", svc.bookSummary)
-	e.GET("/details/:id", svc.bookDetails)
-	e.GET("/qr/:id", svc.qrcodegen)
+	e.GET("/books/stats", svc.bookStats)
+	e.GET("/book/qr/:id", svc.qrcodegen)
 	e.GET("/book/:id", svc.bookByID)
+	e.GET("/book/details/*", svc.bookDetails)
 
 	e.Static("/static", svc.Config.StaticRoot)
 }
@@ -45,6 +46,7 @@ func (svc *service) err400(c echo.Context) error {
 }
 
 // doc returns a documentation page
+// TODO: elaborate!
 func (svc *service) doc(c echo.Context) error {
 	doctext := `
 	<h1>Little Free Library</h1>
@@ -108,10 +110,6 @@ func (svc *service) qrcodegen(c echo.Context) error {
 	return c.Blob(http.StatusOK, "image/png", png)
 }
 
-func (svc *service) bookDetails(c echo.Context) error {
-	return c.String(http.StatusOK, "Ok\n")
-}
-
 func (svc *service) buildConstraints(values url.Values) (*books.ConstraintSpec, error) {
 	constraints := books.NewConstraintSpec()
 	for k, vals := range values {
@@ -145,7 +143,7 @@ func (svc *service) buildConstraints(values url.Values) (*books.ConstraintSpec, 
 			default:
 				constraint, exclude, err := books.ConstraintFromText(k, v)
 				if err != nil {
-					return nil, echo.NewHTTPError(http.StatusBadRequest, "constraint error: %v", err)
+					return nil, echo.NewHTTPError(http.StatusBadRequest, "constraint error: "+err.Error())
 				}
 				if exclude {
 					constraints.Excludes = append(constraints.Excludes, constraint)
@@ -190,10 +188,29 @@ func (svc *service) bookQueryHTML(c echo.Context) error {
 	return c.Render(http.StatusOK, c.Param("format"), result)
 }
 
-func (svc *service) bookSummary(c echo.Context) error {
-	return c.JSON(http.StatusOK, svc.Books.Summary())
+func (svc *service) bookStats(c echo.Context) error {
+	return c.JSON(http.StatusOK, svc.Books.Stats())
+}
+
+func (svc *service) bookDetails(c echo.Context) error {
+	// strip off the fixed path and just take the part that matches the *
+	id := c.Request().URL.Path
+	if strings.HasSuffix(c.Path(), "*") {
+		id = id[len(c.Path())-1:]
+	}
+	book, ok := svc.Books.Get(id)
+	if !ok {
+		return echo.NewHTTPError(http.StatusNotFound, "no book found with id "+id)
+	}
+	return c.JSON(http.StatusOK, book)
 }
 
 func (svc *service) bookByID(c echo.Context) error {
-	return c.String(http.StatusOK, "Ok\n")
+	fmt.Println(c.Path())
+	id := c.Param("id")
+	book, ok := svc.Books.Get(id)
+	if !ok {
+		return echo.NewHTTPError(http.StatusNotFound, "no book found with id "+id)
+	}
+	return c.JSON(http.StatusOK, book)
 }
