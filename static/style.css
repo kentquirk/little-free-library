@@ -8,6 +8,7 @@ body {
 	width: 100%;
 	height: 100%;
 	font-size: larger;
+	font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 a {
 	color: #009900;
@@ -17,7 +18,103 @@ a {
 	flex-direction: column;
 }
 
+.row {
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.col {
+	flex-direction: column;
+	flex-wrap: wrap;
+}
+
 .item {
 	flex-direction: row;
 	flex-wrap: wrap;
+}
+
+.books {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+}
+
+.book {
+	flex: 0 0 600px;
+	margin: 10px;
+}
+
+.toprow {
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.subjrow {
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+.subjrow.p {
+	margin-left: 100px;
+}
+
+.downloadrow {
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.author {
+	margin-left: 100px;
+}
+
+.bookname {
+	font-weight: bolder;
+	font-size: larger;
+	text-align: right;
+}
+
+.bookid {
+	margin-left: 100px;
+	font-weight: bolder;
+	font-size: larger;
+}
+
+.creatorcol {
+	flex-direction: column;
+	flex-wrap: wrap;
+}
+
+.subjcol {
+	flex-direction: column;
+	flex-wrap: wrap;
+	margin-left: 100px;
+}
+
+.downloadcol {
+	flex-direction: column;
+	flex-wrap: wrap;
+	margin-left: 100px;
+}
+
+.labeltag {
+	position: relative;
+    left: -10px;
+    top: 0px;
+    transform-origin: right;
+    transform: rotateZ(-25deg);
+    background: green;
+    color: wheat;
+    width: fit-content;
+    padding: 3px;
+	border-radius: 2px;
+}
+
+.titlecol {
+	flex-direction: column;
+	flex-wrap: wrap;
+	margin-left: 100px;
+}
+
+img {
+	width: 64px;
+	height: 64px;
 }

@@ -33,10 +33,10 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/books/count", svc.bookCount)
 	e.GET("/books/query/html/:format", svc.bookQueryHTML)
 	e.GET("/books/stats", svc.bookStats)
-	e.GET("/book/qr/:id", svc.qrcodegen)
 	e.GET("/book/:id", svc.bookByID)
 	e.GET("/book/details/*", svc.bookDetails)
 
+	e.GET("/qr", svc.qrcodegen)
 	e.Static("/static", svc.Config.StaticRoot)
 }
 
@@ -66,6 +66,9 @@ func (svc *service) health(c echo.Context) error {
 }
 
 // qrcodegen is a handler that returns a png image of a QR code
+// It's intended to be used within a templated img tag, so it doesn't do anything
+// other than render a QR code of the URL parameter passed in. It supports a couple of
+// parameters to control the output
 //
 // Required query parameter is url, which is used as the body of the QR code
 //

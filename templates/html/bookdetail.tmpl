@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+{{define "AUTHORLINK"}}
+    {{if len .Webpages}}
+        <a href="{{index .Webpages 0}}">{{.Name}}</a>
+    {{else}}
+        {{.Name}}
+    {{end}}
+{{end}}
+{{define "FULLITEM"}}
+<div class="item">
+    <span><i>{{.Title}}</i></span>
+    <span>by {{range $cr := .FullCreators}}{{template "AUTHORLINK" $cr}}{{end}}</span>
+</div>
+{{end}}
+{{define "DOCHEAD"}}
+<html>
+    <head>
+        <title>Little Free Library Query Results</title>
+        <link rel="stylesheet" href="/static/style.css">
+    </head>
+    <body>
+        <h1>Little Free Library Results:</h1>
+        <div class="container">
+            {{end}}
+            {{define "DOCTAIL"}}
+        </div>
+    </body>
+</html>
+{{end}}
+{{template "DOCHEAD"}}{{range .}}{{template "FULLITEM" .}}{{end}}{{template "DOCTAIL"}}
