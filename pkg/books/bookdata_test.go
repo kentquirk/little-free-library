@@ -10,34 +10,47 @@ func testEBook() []EBook {
 		{
 			ID:       "a",
 			Title:    "Evelyn's Story",
-			Creators: []string{"Evelyn Excellent"},
+			Creators: []string{"a"},
 			Language: "en",
 			Subjects: []string{"Biography"},
 			Issued:   Date{2005, 7, 18},
+			Agents: map[string]Agent{
+				"a": {Name: "Evelyn Excellent"},
+			},
 		},
 		{
 			ID:       "h",
 			Title:    "Hamilton",
-			Creators: []string{"Lin-Manuel Miranda"},
+			Creators: []string{"h"},
 			Language: "rap",
 			Subjects: []string{"History - Fiction", "History - Play", "Musical"},
 			Issued:   Date{2016, 12, 25},
+			Agents: map[string]Agent{
+				"h": {Name: "Lin-Manuel Miranda"},
+			},
 		},
 		{
 			ID:           "w",
 			Title:        "Wonder Women Play Through the Ages",
-			Illustrators: []string{"Lynda Carter", "Gal Gadot"},
+			Illustrators: []string{"w1", "w2"},
 			Language:     "en",
 			Subjects:     []string{"Comics -- Fiction"},
 			Issued:       Date{2018, 10, 10},
+			Agents: map[string]Agent{
+				"w1": {Name: "Lynda Carter"},
+				"w2": {Name: "Gal Gadot"},
+			},
 		},
 		{
 			ID:       "e",
 			Title:    "The Woman's Music Bible",
-			Creators: []string{"Eve"},
+			Creators: []string{"e"},
 			Language: "en",
 			Subjects: []string{"Music", "Religion"},
 			Issued:   Date{1998, 1, 1},
+			Agents: map[string]Agent{
+				"e": {Name: "Eve"},
+			},
 		},
 	}
 }

@@ -212,8 +212,8 @@ func PGFileFilter(f books.PGFileFilter) LoaderOption {
 	}
 }
 
-// LoadOnly returns a LoaderOptions that limits the number of items loaded
-func LoadOnly(n int) LoaderOption {
+// LoadAtMost returns a LoaderOptions that limits the number of items loaded
+func LoadAtMost(n int) LoaderOption {
 	return func(ldr *Loader) {
 		ldr.loadOnly = n
 	}

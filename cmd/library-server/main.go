@@ -40,7 +40,7 @@ import (
 // REFRESH_TIME (default 23h17m to avoid hitting the servers at the same time every day. This is the frequency
 //   at which the data is refreshed by downloading it from Project Gutenberg.
 // URL. The URL used to fetch catalog.rdf.zip from Project Gutenberg.
-// LOAD_ONLY. If this is a nonzero number, the system will load no more than this many books. Useful for debugging.
+// LOAD_AT_MOST. If this is a nonzero number, the system will load no more than this many books. Useful for debugging.
 // NO_CACHE_TEMPLATES. If this is true, templates will be reloaded on every fetch (useful for editing templates).
 type Config struct {
 	CacheDir         string        `env:"CACHE_DIR" default:"/var/www/.cache"`
@@ -52,7 +52,7 @@ type Config struct {
 	Formats          []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub"`
 	RefreshTime      time.Duration `env:"REFRESH_TIME" default:"23h17m"`
 	URL              string        `env:"URL" default:"/Users/kent/code/little-free-library/data/rdf-files.tar.bz2"`
-	LoadOnly         int           `env:"LOAD_ONLY"`
+	LoadAtMost       int           `env:"LOAD_AT_MOST"`
 	NoCacheTemplates bool          `env:"NO_CACHE_TEMPLATES"`
 	// This is the URL that is current for the latest catalog at gutenberg.org as of January 2021. Please do not
 	// use it for testing; download a local copy. Only use this URL once you are confident that your code is running
@@ -91,6 +91,7 @@ func newService() *service {
 	return svc
 }
 
+// load is intended to be run as a goroutine and also schedules itself to be re-run later.
 func load(svc *service) {
 	resourcename := svc.Config.URL
 	var rdr io.Reader
@@ -115,6 +116,7 @@ func load(svc *service) {
 		}
 	} else {
 		// it's a local file; if it fails, don't retry, just die
+		// (local files are intended just for testing)
 		f, err := os.Open(resourcename)
 		if err != nil {
 			log.Fatalf("couldn't load file %s: %s", resourcename, err)
@@ -123,8 +125,12 @@ func load(svc *service) {
 		defer f.Close()
 	}
 
-	// we've gotten to the point where we have something we can read, so let's plan to refresh whatever we get later
-	time.AfterFunc(svc.Config.RefreshTime, func() { load(svc) })
+	// We've gotten to the point where we have something we can read, so let's plan to refresh
+	// whatever we get later. Note that this calls ourselves with the same payload, so
+	// while it's not technically recursive it does keep starting this goroutine forever.
+	time.AfterFunc(svc.Config.RefreshTime, func() {
+		load(svc)
+	})
 
 	// OK, now we have fetched something.
 	// If it's a .bz2 file, unzip it
@@ -152,7 +158,7 @@ func load(svc *service) {
 		// only the data that meets these specifications will be saved.
 		rdf.EBookFilter(books.LanguageFilter(svc.Config.Languages...)),
 		rdf.PGFileFilter(books.ContentFilter(svc.Config.Formats...)),
-		rdf.LoadOnly(svc.Config.LoadOnly),
+		rdf.LoadAtMost(svc.Config.LoadAtMost),
 	)
 
 	if strings.HasSuffix(resourcename, ".tar") {
