@@ -19,14 +19,15 @@ More to come as I develop this.
 * Echo supports TLS through Let's Encrypt, so we'll enable that if the port is specified as 443. However, for our deployment we may just deploy on port 80 and leave the SSL termination to the load balancer (AWS supports that easily).
 * We're using [a config library](https://github.com/codingconcepts/env) to avoid individually handling a bunch of environment variables.
 * Data storage: we want a lightweight storage system that is easy to use; we don't need a lot. Options are:
-    * Redis is fast, easy, powerful and rock-solid. But it requires setting it up on AWS. The same applies to
-    * SQLite can be used with a local setup
-    * One of the AWS data storage solutions; none of them are easy and they can quickly rack up the bills
-    * AirTable might be a really good solution -- we let data entry happen in AirTable, and refresh the data on startup or when prompted by the API
-        * It would only be used to store basic information on a curated list of titles
-        * Actual content would be fetched and cached from project gutenberg
-        * The free version would be limited to 1200 items, which might be fine for a little library
-        * Should abstract it a bit so that it's easy to implement other backends
+    * Redis is fast, easy, powerful and rock-solid. But it requires setting it up and a more complex deployment. The same applies to third parties like, say, Atlas.
+    * SQLite can be used with a local setup on a local disk.
+    * One of the AWS data storage solutions; none of them are easy and they can quickly rack up the bills.
+    * AirTable might be a really good solution -- we let data entry happen in AirTable, and refresh the data on startup or when prompted by the API.
+        * It would only be used to store basic information on a curated list of titles.
+        * Actual content would be fetched and cached from project gutenberg.
+        * The free version would be limited to 1200 items, which might be fine for a little library but it is definitely limiting the content and requires a fair bit of initial curation.
+        * Should abstract it a bit so that it's easy to implement other backends.
+    * For now, since this is a read-only API, we're going to store all the data in a local cache and reload it from the source data every time we start the server. This costs about a minute at startup but avoids any of these problems. However, it also causes problems if we ever want to scale horizontally and also prevents us from running this service on Lambda (there's no persistence in Lambda). We can revisit this later once we have a better understanding of our query types.
 
 
 ### Reading the data from Project Gutenberg

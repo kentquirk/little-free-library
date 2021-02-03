@@ -2,7 +2,11 @@ package books
 
 import (
 	"math/rand"
+	"regexp"
+	"strings"
 	"time"
+
+	"github.com/kentquirk/stringset"
 )
 
 // PGFile is the parsed and processed structure of an xmlFile object
@@ -17,23 +21,24 @@ type PGFile struct {
 
 // EBook is the parsed and processed structure of an ebook object as defined in the XML.
 type EBook struct {
-	ID              string           `json:"id,omitempty"`
-	Publisher       string           `json:"publisher,omitempty"`
-	Title           string           `json:"title,omitempty"`
-	Creators        []string         `json:"creators,omitempty"`
-	Illustrators    []string         `json:"illustrators,omitempty"`
-	TableOfContents string           `json:"table_of_contents,omitempty"`
-	Language        string           `json:"language,omitempty"`
-	Subjects        []string         `json:"subjects,omitempty"`
-	Issued          Date             `json:"issued,omitempty"`
-	DownloadCount   int              `json:"download_count,omitempty"`
-	Rights          string           `json:"rights,omitempty"`
-	Copyright       string           `json:"copyright,omitempty"`
-	CopyrightDates  []Date           `json:"-"`
-	Edition         string           `json:"edition,omitempty"`
-	Type            string           `json:"type,omitempty"`
-	Files           []PGFile         `json:"files,omitempty"`
-	Agents          map[string]Agent `json:"agents,omitempty"`
+	ID              string               `json:"id,omitempty"`
+	Publisher       string               `json:"publisher,omitempty"`
+	Title           string               `json:"title,omitempty"`
+	Creators        []string             `json:"creators,omitempty"`
+	Illustrators    []string             `json:"illustrators,omitempty"`
+	TableOfContents string               `json:"table_of_contents,omitempty"`
+	Language        string               `json:"language,omitempty"`
+	Subjects        []string             `json:"subjects,omitempty"`
+	Issued          Date                 `json:"issued,omitempty"`
+	DownloadCount   int                  `json:"download_count,omitempty"`
+	Rights          string               `json:"rights,omitempty"`
+	Copyright       string               `json:"copyright,omitempty"`
+	Edition         string               `json:"edition,omitempty"`
+	Type            string               `json:"type,omitempty"`
+	Files           []PGFile             `json:"files,omitempty"`
+	Agents          map[string]Agent     `json:"agents,omitempty"`
+	CopyrightDates  []Date               `json:"-"`
+	Words           *stringset.StringSet `json:"-"`
 }
 
 // FullCreators is a helper function for templates to extract the creator name(s)
@@ -43,6 +48,17 @@ func (e *EBook) FullCreators() []Agent {
 		agents = append(agents, e.Agents[agent])
 	}
 	return agents
+}
+
+func (e *EBook) extractWords() {
+	w := stringset.New().Add(getWords(e.Title)...)
+	for i := range e.Subjects {
+		w.Add(getWords(e.Subjects[i])...)
+	}
+	for _, v := range e.Agents {
+		v.AddWords(w)
+	}
+	e.Words = w
 }
 
 // Agent is a record for a human (Project Gutenberg calls these agents).
@@ -56,10 +72,37 @@ type Agent struct {
 	Webpages  []string `json:"webpages,omitempty"`
 }
 
+// AddWords the list of lower-case alphanumerics in the
+// Agent Name and Aliases to the given StringSet
+func (a Agent) AddWords(w *stringset.StringSet) {
+	w.Add(getWords(a.Name)...)
+	for i := range a.Aliases {
+		w.Add(getWords(a.Aliases[i])...)
+	}
+}
+
+// WordPat is a pattern we use when we need to extract all the alphanumeric elements in a string
+var WordPat = regexp.MustCompile("[^a-z0-9]+")
+
+// I looked at eliminating "noise words" to reduce the size of the word indices, but it only
+// reduced it by 20%, and that didn't seem worth the extra logic and the reduced
+// precision of the search.
+// var noiseWords = stringset.New().Add(WordPat.Split(`
+// 				an and but is it of or the to
+// 				a b c d e f g h i j k l m n o p q r s t u v w x y z
+// 				0 1 2 3 4 5 6 7 8 9
+// 				`, -1)...)
+
+func getWords(s string) []string {
+	return WordPat.Split(strings.ToLower(s), -1)
+}
+
 // BookData is the type that we use to contain the book data and wrap all the queries.
 // If we decide we want some sort of external data store, we can put it here.
 // This is intended to be an opaque data structure; use accessors and query methods
 // to retrieve data.
+// The agentWords member is an index of individual words in the agent information so that
+// word-level queries can be fast.
 type BookData struct {
 	books []EBook
 }
@@ -100,19 +143,22 @@ func (b *BookData) Get(id string) (EBook, bool) {
 // StatsData is the data structure used to return collection-level information
 // about the data on hand.
 type StatsData struct {
-	TotalBooks int            `json:"total_books"`
-	TotalFiles int            `json:"total_files"`
-	Languages  map[string]int `json:"languages"`
-	Formats    map[string]int `json:"formats"`
+	TotalBooks   int            `json:"total_books"`
+	TotalFiles   int            `json:"total_files"`
+	AvgIndexSize float64        `json:"avg_index_size"`
+	Languages    map[string]int `json:"languages"`
+	Formats      map[string]int `json:"formats"`
 }
 
 // Stats returns aggregated information about the data being stored.
 func (b *BookData) Stats() StatsData {
+	var totalWordsInIndex float64
 	sd := StatsData{
 		Languages: make(map[string]int),
 		Formats:   make(map[string]int),
 	}
 	for i := range b.books {
+		totalWordsInIndex += float64(b.books[i].Words.Length())
 		sd.TotalBooks++
 		lang := b.books[i].Language
 		sd.Languages[lang]++
@@ -123,6 +169,7 @@ func (b *BookData) Stats() StatsData {
 			}
 		}
 	}
+	sd.AvgIndexSize = totalWordsInIndex / float64(sd.TotalBooks)
 	return sd
 }
 

@@ -117,7 +117,7 @@ func (x *xmlAgent) asAgent() Agent {
 
 // asEBook generates an EBook from an xmlEBook
 func (x *xmlEbook) asEBook() EBook {
-	et := EBook{
+	eb := EBook{
 		ID:              x.ID,
 		Publisher:       x.Publisher,
 		Title:           x.Title,
@@ -133,22 +133,24 @@ func (x *xmlEbook) asEBook() EBook {
 		Type:            x.Type,
 		Files:           make([]PGFile, 0, 4),
 		Agents:          make(map[string]Agent),
+		Words:           nil,
 	}
 	for i := range x.Creators {
-		et.Creators = append(et.Creators, x.Creators[i].ID)
-		et.Agents[x.Creators[i].ID] = x.Creators[i].asAgent()
+		eb.Creators = append(eb.Creators, x.Creators[i].ID)
+		eb.Agents[x.Creators[i].ID] = x.Creators[i].asAgent()
 	}
 	for i := range x.Illustrators {
-		et.Illustrators = append(et.Illustrators, x.Illustrators[i].ID)
-		et.Agents[x.Illustrators[i].ID] = x.Illustrators[i].asAgent()
+		eb.Illustrators = append(eb.Illustrators, x.Illustrators[i].ID)
+		eb.Agents[x.Illustrators[i].ID] = x.Illustrators[i].asAgent()
 	}
 	for i := range x.Subjects {
 		if strings.HasSuffix(x.Subjects[i].Description.MemberOf.Resource, "LCSH") {
-			et.Subjects = append(et.Subjects, x.Subjects[i].Description.Subject)
+			eb.Subjects = append(eb.Subjects, x.Subjects[i].Description.Subject)
 		}
 	}
-	et.Issued, _ = ParseDate(x.Issued)
-	return et
+	eb.Issued, _ = ParseDate(x.Issued)
+	eb.extractWords()
+	return eb
 }
 
 func (x *xmlFile) asFile() PGFile {

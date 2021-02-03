@@ -99,7 +99,7 @@ outer:
 		if useRegexp {
 			retfunc = matchCreator(pat)
 		} else {
-			retfunc = testCreator(value)
+			retfunc = testWords(value, matchCreator)
 		}
 
 	case "illustrator", "ill":
@@ -112,25 +112,25 @@ outer:
 		if useRegexp {
 			retfunc = Or(matchCreator(pat), matchIllustrator(pat))
 		} else {
-			retfunc = Or(testCreator(value), testIllustrator(value))
+			retfunc = Or(testWords(value, matchCreator), testIllustrator(value))
 		}
 	case "title":
 		if useRegexp {
 			retfunc = matchTitle(pat)
 		} else {
-			retfunc = testTitle(value)
+			retfunc = testWords(value, matchTitle)
 		}
 	case "subject", "subj":
 		if useRegexp {
 			retfunc = matchSubject(pat)
 		} else {
-			retfunc = testSubject(value)
+			retfunc = testWords(value, matchSubject)
 		}
 	case "topic", "top":
 		if useRegexp {
 			retfunc = Or(matchTitle(pat), matchSubject(pat))
 		} else {
-			retfunc = Or(testTitle(value), testSubject(value))
+			retfunc = Or(testWords(value, matchTitle), testWords(value, matchSubject))
 		}
 	case "type", "typ":
 		if useRegexp {
@@ -142,7 +142,7 @@ outer:
 		if useRegexp {
 			retfunc = Or(matchCreator(pat), matchIllustrator(pat), matchTitle(pat), matchSubject(pat))
 		} else {
-			retfunc = Or(testCreator(value), testIllustrator(value), testTitle(value), testSubject(value))
+			retfunc = Or(testWords(value, matchCreator), testIllustrator(value), testWords(value, matchTitle), testWords(value, matchSubject))
 		}
 	case "language", "lang":
 		retfunc = testLanguage(value)

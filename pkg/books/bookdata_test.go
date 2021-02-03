@@ -6,7 +6,7 @@ import (
 
 // We don't need all the fields for our testing
 func testEBook() []EBook {
-	return []EBook{
+	ebs := []EBook{
 		{
 			ID:       "a",
 			Title:    "Evelyn's Story",
@@ -53,6 +53,10 @@ func testEBook() []EBook {
 			},
 		},
 	}
+	for i := range ebs {
+		ebs[i].extractWords()
+	}
+	return ebs
 }
 
 func TestConstraint_testCreator(t *testing.T) {
@@ -67,7 +71,7 @@ func TestConstraint_testCreator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := testCreator(tt.p)
+			f := testWords(tt.p, matchCreator)
 			result := ""
 			for _, book := range data {
 				if f(book) {
@@ -93,7 +97,7 @@ func TestConstraint_testIllustrator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := testIllustrator(tt.p)
+			f := testWords(tt.p, matchIllustrator)
 			result := ""
 			for _, book := range data {
 				if f(book) {
@@ -120,7 +124,7 @@ func TestConstraint_testSubject(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := testSubject(tt.p)
+			f := testWords(tt.p, matchSubject)
 			result := ""
 			for _, book := range data {
 				if f(book) {
@@ -146,7 +150,7 @@ func TestConstraint_testTitle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := testTitle(tt.p)
+			f := testWords(tt.p, matchTitle)
 			result := ""
 			for _, book := range data {
 				if f(book) {
@@ -347,10 +351,10 @@ func TestConstraint_Or(t *testing.T) {
 		f    ConstraintFunctor
 		want string
 	}{
-		{"1", Or(testTitle("the"), testLanguage("rap")), "hwe"},
+		{"1", Or(testWords("the", matchTitle), testLanguage("rap")), "hwe"},
 		{"2", Or(), ""},
-		{"3", Or(testTitle("bible"), testTitle("music")), "e"},
-		{"3", Or(testTitle("bible"), testTitle("Story")), "ae"},
+		{"3", Or(testWords("bible", matchTitle), testWords("music", matchTitle)), "e"},
+		{"3", Or(testWords("bible", matchTitle), testWords("Story", matchTitle)), "ae"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -361,7 +365,7 @@ func TestConstraint_Or(t *testing.T) {
 				}
 			}
 			if result != tt.want {
-				t.Errorf("testTitle() = %v, want %v", result, tt.want)
+				t.Errorf("testWords() = %v, want %v", result, tt.want)
 			}
 		})
 	}
@@ -374,10 +378,10 @@ func TestConstraint_And(t *testing.T) {
 		f    ConstraintFunctor
 		want string
 	}{
-		{"1", And(testTitle("the"), testLanguage("rap")), ""},
+		{"1", And(testWords("the", matchTitle), testLanguage("rap")), ""},
 		{"2", And(), ""},
-		{"3", And(testTitle("bible"), testTitle("music")), "e"},
-		{"3", And(testTitle("bible"), testTitle("Story")), ""},
+		{"3", And(testWords("bible", matchTitle), testWords("music", matchTitle)), "e"},
+		{"3", And(testWords("bible", matchTitle), testWords("Story", matchTitle)), ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -388,7 +392,7 @@ func TestConstraint_And(t *testing.T) {
 				}
 			}
 			if result != tt.want {
-				t.Errorf("testTitle() = %v, want %v", result, tt.want)
+				t.Errorf("testWords() = %v, want %v", result, tt.want)
 			}
 		})
 	}

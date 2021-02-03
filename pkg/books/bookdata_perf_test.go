@@ -3,7 +3,6 @@ package books
 import (
 	"compress/bzip2"
 	"compress/gzip"
-	"flag"
 	"io"
 	"log"
 	"os"
@@ -13,6 +12,9 @@ import (
 )
 
 func loadTestData(books *BookData) {
+	if len(books.books) != 0 {
+		return
+	}
 	resourcename := "/Users/kent/code/little-free-library/data/rdf-files.tar.bz2"
 	var rdr io.Reader
 
@@ -65,20 +67,11 @@ func loadTestData(books *BookData) {
 	log.Printf("book loading complete -- %d files read, %d books in dataset, took %s.\n", count, len(books.books), endtime.Sub(starttime).String())
 }
 
-var books *BookData
+var books *BookData = NewBookData()
 var constraints *ConstraintSpec
 
-func TestMain(m *testing.M) {
-	flag.Parse()
-	if testing.Short() {
-		os.Exit(0)
-	}
-	books = NewBookData()
-	loadTestData(books)
-	os.Exit(m.Run())
-}
-
 func BenchmarkCreatorQuery(b *testing.B) {
+	loadTestData(books)
 	constraints = NewConstraintSpec()
 	constraints.Limit = 1
 	constraint, _, _ := ConstraintFromText("creator", "Poe")
@@ -90,6 +83,7 @@ func BenchmarkCreatorQuery(b *testing.B) {
 }
 
 func BenchmarkAuthorQuery(b *testing.B) {
+	loadTestData(books)
 	constraints = NewConstraintSpec()
 	constraints.Limit = 1
 	constraint, _, _ := ConstraintFromText("author", "Poe")
@@ -101,6 +95,7 @@ func BenchmarkAuthorQuery(b *testing.B) {
 }
 
 func BenchmarkIllustratorQuery(b *testing.B) {
+	loadTestData(books)
 	constraints = NewConstraintSpec()
 	constraints.Limit = 1
 	constraint, _, _ := ConstraintFromText("illustrator", "Parrish")
@@ -112,6 +107,7 @@ func BenchmarkIllustratorQuery(b *testing.B) {
 }
 
 func BenchmarkTitleQuery(b *testing.B) {
+	loadTestData(books)
 	constraints = NewConstraintSpec()
 	constraints.Limit = 1
 	constraint, _, _ := ConstraintFromText("title", "dogs")
@@ -123,6 +119,7 @@ func BenchmarkTitleQuery(b *testing.B) {
 }
 
 func BenchmarkSubjectQuery(b *testing.B) {
+	loadTestData(books)
 	constraints = NewConstraintSpec()
 	constraints.Limit = 1
 	constraint, _, _ := ConstraintFromText("illustrator", "music")
@@ -132,3 +129,19 @@ func BenchmarkSubjectQuery(b *testing.B) {
 		books.Query(constraints)
 	}
 }
+
+// Results before adding word index:
+// BenchmarkCreatorQuery-12        	   34490	     34080 ns/op	     353 B/op	       2 allocs/op
+// BenchmarkAuthorQuery-12         	   36412	     33400 ns/op	     353 B/op	       2 allocs/op
+// BenchmarkIllustratorQuery-12    	     784	   1295505 ns/op	     495 B/op	       2 allocs/op
+// BenchmarkTitleQuery-12          	    1711	    710174 ns/op	     374 B/op	       2 allocs/op
+// BenchmarkSubjectQuery-12        	     100	  10073556 ns/op	     417 B/op	       1 allocs/op
+//
+// Results after word index:
+// BenchmarkCreatorQuery-12        	  173044	      7352 ns/op	    2626 B/op	      70 allocs/op
+// BenchmarkAuthorQuery-12         	  192050	      6493 ns/op	    2627 B/op	      70 allocs/op
+// BenchmarkIllustratorQuery-12    	    2196	    463247 ns/op	   48323 B/op	    1472 allocs/op
+// BenchmarkTitleQuery-12          	   10000	    111319 ns/op	   35308 B/op	    1084 allocs/op
+// BenchmarkSubjectQuery-12        	     318	   3739078 ns/op	  303261 B/op	    9451 allocs/op
+//
+// Basically, 3-7x improvement.
