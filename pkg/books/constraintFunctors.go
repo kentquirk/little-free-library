@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kentquirk/stringset"
+	"github.com/kentquirk/stringset/v2"
 )
 
 // ConstraintFunctor is the type of the function used to evaluate a constraint.

@@ -5,8 +5,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
-github.com/kentquirk/stringset v1.2.0 h1:1xmOugIFGlde8rYr76Uc92Swu1R54J9tk6IpYjV5mtQ=
-github.com/kentquirk/stringset v1.2.0/go.mod h1:6JHUP7mx4c00E4uhhxF/HO0+5GhCaiuym9uLj+Vzfck=
+github.com/kentquirk/stringset/v2 v2.0.1 h1:EFGeeR5cQy5HHQ5TnXvQeZ8iYrWEsUquvxLpmW3sLyA=
+github.com/kentquirk/stringset/v2 v2.0.1/go.mod h1:/H8e02P6bVwWA4SZijswQdnFPaD2o56M/cQWL2EkWB4=
 github.com/labstack/echo/v4 v4.1.16 h1:8swiwjE5Jkai3RPfZoahp8kjVCRNq+y7Q0hPji2Kz0o=
 github.com/labstack/echo/v4 v4.1.16/go.mod h1:awO+5TzAjvL8XpibdsfXxPgHr+orhtXZJZIQCVjogKI=
 github.com/labstack/gommon v0.3.0 h1:JEeO0bvc78PKdyHxloTKiF8BD5iGrH8T6MSeGvSgob0=

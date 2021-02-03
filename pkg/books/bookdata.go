@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kentquirk/stringset"
+	"github.com/kentquirk/stringset/v2"
 )
 
 // PGFile is the parsed and processed structure of an xmlFile object
