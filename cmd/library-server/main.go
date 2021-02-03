@@ -18,7 +18,6 @@ import (
 
 	"github.com/codingconcepts/env"
 	"github.com/kentquirk/little-free-library/pkg/books"
-	"github.com/kentquirk/little-free-library/pkg/rdf"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
@@ -152,13 +151,13 @@ func load(svc *service) {
 	// now we have an uncompressed reader, we can start loading data from it
 	count := 0
 	starttime := time.Now()
-	r := rdf.NewLoader(rdr,
+	r := books.NewLoader(rdr,
 		// We don't want to be delivering data that our users can't use, so we pre-filter the data that goes
 		// into the dataset. The target language(s) and target formats can be specified in the config, and
 		// only the data that meets these specifications will be saved.
-		rdf.EBookFilter(books.LanguageFilter(svc.Config.Languages...)),
-		rdf.PGFileFilter(books.ContentFilter(svc.Config.Formats...)),
-		rdf.LoadAtMost(svc.Config.LoadAtMost),
+		books.EBookFilterOpt(books.LanguageFilter(svc.Config.Languages...)),
+		books.PGFileFilterOpt(books.ContentFilter(svc.Config.Formats...)),
+		books.LoadAtMostOpt(svc.Config.LoadAtMost),
 	)
 
 	if strings.HasSuffix(resourcename, ".tar") {

@@ -63,6 +63,9 @@ func createRegex(value string) (*regexp.Regexp, error) {
 // Eve matches only Eve
 // L.n_ matches Lynn and Linda
 // _l.n_ matches Linda, Evelyn and Lynn
+//
+// The return values are the generated constraint functor, a boolean indicating if the
+// constraint is an exclude constraint, and an error.
 func ConstraintFromText(name string, value string) (ConstraintFunctor, bool, error) {
 	exclude := false
 	useRegexp := false

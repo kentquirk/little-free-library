@@ -1,5 +1,7 @@
 package books
 
+import "strings"
+
 // EBookFilter is a function that evaluates an EBook object and returns
 // true if the object "passes". Only if an object passes all filters is
 // it included in the output.
@@ -32,7 +34,7 @@ func ContentFilter(contentTypes ...string) PGFileFilter {
 		for _, ctname := range contentTypes {
 			if ct, ok := ContentTypes[ctname]; ok {
 				for _, format := range f.Formats {
-					if format == ct {
+					if strings.HasPrefix(format, ct) {
 						return true
 					}
 				}

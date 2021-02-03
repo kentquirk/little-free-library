@@ -1,4 +1,4 @@
-package rdf
+package books
 
 import (
 	"archive/tar"
@@ -6,8 +6,6 @@ import (
 	"io"
 	"log"
 	"strings"
-
-	"github.com/kentquirk/little-free-library/pkg/books"
 )
 
 func extractCharDataToEndToken(d *xml.Decoder, start xml.StartElement) ([]string, error) {
@@ -94,16 +92,16 @@ type xmlFile struct {
 
 const xmlDateFormat = "2006-01-02"
 
-func mustDate(s string) books.Date {
-	if date, ix := books.ParseDate(s); ix != 0 {
+func mustDate(s string) Date {
+	if date, ix := ParseDate(s); ix != 0 {
 		return date
 	}
-	return books.Date{}
+	return Date{}
 }
 
 // asAgent generates an Agent from an xmlAgent
-func (x *xmlAgent) asAgent() books.Agent {
-	agent := books.Agent{
+func (x *xmlAgent) asAgent() Agent {
+	agent := Agent{
 		ID:        x.ID,
 		Name:      x.Name,
 		Aliases:   x.Alias,
@@ -118,8 +116,8 @@ func (x *xmlAgent) asAgent() books.Agent {
 }
 
 // asEBook generates an EBook from an xmlEBook
-func (x *xmlEbook) asEBook() books.EBook {
-	et := books.EBook{
+func (x *xmlEbook) asEBook() EBook {
+	et := EBook{
 		ID:              x.ID,
 		Publisher:       x.Publisher,
 		Title:           x.Title,
@@ -130,11 +128,11 @@ func (x *xmlEbook) asEBook() books.EBook {
 		DownloadCount:   x.Downloads,
 		Rights:          x.Rights,
 		Copyright:       x.Copyright,
-		CopyrightDates:  books.ParseAllDates(x.Copyright),
+		CopyrightDates:  ParseAllDates(x.Copyright),
 		Edition:         x.Edition,
 		Type:            x.Type,
-		Files:           make([]books.PGFile, 0, 4),
-		Agents:          make(map[string]books.Agent),
+		Files:           make([]PGFile, 0, 4),
+		Agents:          make(map[string]Agent),
 	}
 	for i := range x.Creators {
 		et.Creators = append(et.Creators, x.Creators[i].ID)
@@ -149,18 +147,18 @@ func (x *xmlEbook) asEBook() books.EBook {
 			et.Subjects = append(et.Subjects, x.Subjects[i].Description.Subject)
 		}
 	}
-	et.Issued, _ = books.ParseDate(x.Issued)
+	et.Issued, _ = ParseDate(x.Issued)
 	return et
 }
 
-func (x *xmlFile) asFile() books.PGFile {
-	f := books.PGFile{
+func (x *xmlFile) asFile() PGFile {
+	f := PGFile{
 		Location:   x.About,
 		Formats:    x.Formats,
 		FileSize:   x.Extent,
 		IsFormatOf: x.IsFormatOf.Resource,
 	}
-	f.Modified, _ = books.ParseDate(x.Modified)
+	f.Modified, _ = ParseDate(x.Modified)
 
 	return f
 }
@@ -175,8 +173,8 @@ type xmlRdf struct {
 // Loader loads an RDF file given a reader to it
 type Loader struct {
 	reader        io.Reader
-	ebookFilters  []books.EBookFilter
-	pgFileFilters []books.PGFileFilter
+	ebookFilters  []EBookFilter
+	pgFileFilters []PGFileFilter
 	loadOnly      int
 }
 
@@ -192,35 +190,35 @@ func NewLoader(r io.Reader, options ...LoaderOption) *Loader {
 	}
 	// if after this there are no ebookFilters, add a dummy one that passes everything
 	if len(loader.ebookFilters) == 0 {
-		loader.ebookFilters = []books.EBookFilter{func(*books.EBook) bool { return true }}
+		loader.ebookFilters = []EBookFilter{func(*EBook) bool { return true }}
 	}
 
 	return loader
 }
 
-// EBookFilter returns a LoaderOption that adds an EBookFilter
-func EBookFilter(f books.EBookFilter) LoaderOption {
+// EBookFilterOpt returns a LoaderOption that adds an EBookFilter
+func EBookFilterOpt(f EBookFilter) LoaderOption {
 	return func(ldr *Loader) {
 		ldr.ebookFilters = append(ldr.ebookFilters, f)
 	}
 }
 
-// PGFileFilter returns a LoaderOption that adds a PGFileFilter
-func PGFileFilter(f books.PGFileFilter) LoaderOption {
+// PGFileFilterOpt returns a LoaderOption that adds a PGFileFilter
+func PGFileFilterOpt(f PGFileFilter) LoaderOption {
 	return func(ldr *Loader) {
 		ldr.pgFileFilters = append(ldr.pgFileFilters, f)
 	}
 }
 
-// LoadAtMost returns a LoaderOptions that limits the number of items loaded
-func LoadAtMost(n int) LoaderOption {
+// LoadAtMostOpt returns a LoaderOptions that limits the number of items loaded
+func LoadAtMostOpt(n int) LoaderOption {
 	return func(ldr *Loader) {
 		ldr.loadOnly = n
 	}
 }
 
 // load is a helper function used by the Load functions
-func (r *Loader) load(rdr io.Reader) []books.EBook {
+func (r *Loader) load(rdr io.Reader) []EBook {
 	var data xmlRdf
 	decoder := xml.NewDecoder(rdr)
 	if err := decoder.Decode(&data); err != nil {
@@ -228,7 +226,7 @@ func (r *Loader) load(rdr io.Reader) []books.EBook {
 	}
 
 	// Go through the ebooks and keep the ones that pass the filter
-	ebooks := make([]books.EBook, 0)
+	ebooks := make([]EBook, 0)
 	for i := range data.EBooks {
 		et := data.EBooks[i].asEBook()
 		for _, filt := range r.ebookFilters {
@@ -260,7 +258,7 @@ func (r *Loader) load(rdr io.Reader) []books.EBook {
 // It only returns the entities that pass the filters that have been set up
 // before calling load.
 // Returns 1 (the number of files processed).
-func (r *Loader) LoadOne(bookdata *books.BookData) int {
+func (r *Loader) LoadOne(bookdata *BookData) int {
 	// Go through the ebooks and keep the ones that pass the filter
 	ebooks := r.load(r.reader)
 	bookdata.Update(ebooks)
@@ -270,10 +268,10 @@ func (r *Loader) LoadOne(bookdata *books.BookData) int {
 // LoadTar loads from a reader, expecting the reader to be a tar file that contains lots of files of books
 // It returns the number of files that were processed within the tar, and replaces the bookdata's contents.
 // If loadOnly is set, it limits the number of items loaded. This is mainly useful for testing.
-func (r *Loader) LoadTar(bookdata *books.BookData) int {
+func (r *Loader) LoadTar(bookdata *BookData) int {
 	count := 0
 	tr := tar.NewReader(r.reader)
-	ebooks := make([]books.EBook, 0)
+	ebooks := make([]EBook, 0)
 	for {
 		_, err := tr.Next()
 		if err == io.EOF {
