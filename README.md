@@ -5,6 +5,16 @@ More to come as I develop this.
 
 ## Design Notes
 
+### pkg/books is too big
+
+We have a rather odd data structure to draw from -- the Project Gutenberg database. It's an XML file format that has evolved over the years -- it's now a collection of individual files, each containing information about a single book. There's a single directory with over 65000 subdirectories, each containing an XML file. That's a lot of parsing and it takes over a minute to load all that data.
+
+Furthermore, although the data follows specific XML schema (called RDF), many times the schema named do not themselves exist! And in other cases, the schema are layered deep within some other specification. So I've had to do a bit of guessing to determine the meaning of all the fields.
+
+The original hope was to cleanly separate the XML file reading code from the book data code -- but it proved challenging to keep them separated (the code to translate one to the other gets tricky), so I eventually gave up and moved the RDF loader/parser into the more general books package. Maybe someday we can move it back out.
+
+The other thing I would have liked to do is to separate the data storage and make it more generic, but (see below) I also wanted this whole thing to run in memory and not have an external dependency for now. So that also ends up in the books package for now.
+
 ### Technical details
 
 * Using a lightweight framework in Go makes things like TLS integration a little easier. I had heard good things about chi, but the developers there have decided that they don't like Go's versioning system and have deliberately broken it (going backwards in version numbers from 4.X to 1.5!) and then [doubled down on justifying their decision](https://github.com/go-chi/chi/issues/561). You don't have to like the way Go did it (I don't, although I don't hate it the way I did at first). But deliberately fighting with the platform standard is pointless and makes your project unusable in production. So I've settled on [echo](https://echo.labstack.com/), which seems to be stable, updated, lightweight, and reasonably popular.

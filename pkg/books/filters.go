@@ -26,7 +26,7 @@ func LanguageFilter(languages ...string) EBookFilter {
 }
 
 // ContentFilter is a convenience function that returns a PGFileFilter which
-// returns true if the file is an exact match for any one of the specified content types.
+// returns true if the file has a matching prefix of for any one of the specified content types.
 // Some files have two content types -- the base type, and Zip (if there is a zipped version
 // of the file).
 func ContentFilter(contentTypes ...string) PGFileFilter {

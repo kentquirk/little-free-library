@@ -24,22 +24,6 @@ func parseIntWithDefault(input string, def int) (int, error) {
 	return n, nil
 }
 
-func (svc *service) setupRoutes(e *echo.Echo) {
-	// Routes
-	e.GET("/", svc.err400)
-	e.GET("/doc", svc.doc)
-	e.GET("/health", svc.health)
-	e.GET("/books/query", svc.bookQuery)
-	e.GET("/books/count", svc.bookCount)
-	e.GET("/books/query/html/:format", svc.bookQueryHTML)
-	e.GET("/books/stats", svc.bookStats)
-	e.GET("/book/:id", svc.bookByID)
-	e.GET("/book/details/*", svc.bookDetails)
-
-	e.GET("/qr", svc.qrcodegen)
-	e.Static("/static", svc.Config.StaticRoot)
-}
-
 // err400 returns 400 and is used to discourage random queries
 func (svc *service) err400(c echo.Context) error {
 	return c.String(http.StatusBadRequest, "Go away.")
