@@ -42,7 +42,7 @@ The other thing I would have liked to do is to separate the data storage and mak
 
 ### Reading the data from Project Gutenberg
 
-[This package](pkg/rdf) contains the code to load an "RDF" file which is a specific format of XML that is used by Project Gutenberg.
+[This package](pkg/books) contains the code to load an "RDF" file which is a specific format of XML that is used by Project Gutenberg.
 [The offline catalogs page](http://www.gutenberg.org/ebooks/offline_catalogs.html) requests that this format be the one used for fetching data for offline uses.
 
 
