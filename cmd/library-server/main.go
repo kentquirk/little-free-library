@@ -3,13 +3,16 @@ package main
 
 import (
 	"context"
+	"crypto/sha512"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/codingconcepts/env"
+	"github.com/kentquirk/stringset/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
@@ -34,6 +37,9 @@ import (
 // LOAD_AT_MOST. If this is a nonzero number, the system will load no more than this many books. Useful for debugging.
 // NO_CACHE_TEMPLATES. If this is true, templates will be reloaded on every fetch (useful for editing templates).
 type Config struct {
+	ValidUsers       []string      `env:"VALID_USERS"`
+	AuthSecret       string        `env:"AUTH_SECRET"`
+	AuthSalt         string        `env:"AUTH_SALT" default:"This is sample salt."`
 	CacheDir         string        `env:"CACHE_DIR" default:"/var/www/.cache"`
 	StaticRoot       string        `env:"STATIC_ROOT" required:"true"`
 	Port             int           `env:"PORT" required:"true"`
@@ -52,7 +58,24 @@ type Config struct {
 	// URL             string        `env:"URL" default:"http://www.gutenberg.org/cache/epub/feeds/rdf-files.tar.bz2"`
 }
 
-func setupMiddleware(e *echo.Echo) {
+func authValidator(cfg Config) func(key string, c echo.Context) (bool, error) {
+	keys := stringset.New()
+	for _, u := range cfg.ValidUsers {
+		h := sha512.New()
+		h.Write([]byte(cfg.AuthSecret))
+		h.Write([]byte(cfg.AuthSalt))
+		h.Write([]byte(u))
+		key := fmt.Sprintf("%x", h.Sum(nil))[:16]
+		keys.Add(key)
+	}
+	// log.Println(keys.WrappedJoin("Authorized keys:", ", ", ""))
+
+	return func(key string, c echo.Context) (bool, error) {
+		return keys.Contains(key), nil
+	}
+}
+
+func setupMiddleware(e *echo.Echo, cfg Config) {
 	e.Use(
 		// don't allow big bodies to choke us
 		middleware.BodyLimit("64K"),
@@ -62,6 +85,14 @@ func setupMiddleware(e *echo.Echo) {
 		middleware.Logger(),
 		// crash handling
 		middleware.Recover(),
+		// key auth
+		middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
+			Validator: authValidator(cfg),
+			// skip auth for local queries
+			Skipper: func(c echo.Context) bool {
+				return strings.HasPrefix(c.Request().Host, "localhost")
+			},
+		}),
 		// TODO: add rate limiter
 	)
 }
@@ -79,7 +110,7 @@ func main() {
 	// TODO: put dircache in config
 	e.AutoTLSManager.Cache = autocert.DirCache(svc.Config.CacheDir)
 
-	setupMiddleware(e)
+	setupMiddleware(e, svc.Config)
 	svc.setupRoutes(e)
 	e.Renderer = svc
 

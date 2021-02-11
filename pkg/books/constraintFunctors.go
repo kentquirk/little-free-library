@@ -60,6 +60,8 @@ func And(cfs ...ConstraintFunctor) ConstraintFunctor {
 	}
 }
 
+// testWords evaluates a value to see if it even possibly matches any of the whole words
+// in the query before passing it on to a regexp-based matcher.
 func testWords(value string, matchGen ConstraintFunctorGen) ConstraintFunctor {
 	words := stringset.New().Add(getWords(value)...)
 	pat, err := regexp.Compile(fmt.Sprintf(wholeWord, value))
@@ -95,6 +97,7 @@ func matchCreator(pat *regexp.Regexp) ConstraintFunctor {
 
 // This is an optimized illustrator query because there are so few illustrators
 func testIllustrator(value string) ConstraintFunctor {
+	// Build this outside the functor for efficiency.
 	testfunc := testWords(value, matchIllustrator)
 	return func(eb EBook) bool {
 		if len(eb.Illustrators) == 0 {
