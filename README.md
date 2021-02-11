@@ -1,19 +1,21 @@
 # Little Free Library
-Provides the support for the Digital Little Free Library project, which is a frontend for Project Gutenberg.
+Provides the support for the Digital Little Free Library project, which is a backend service that provides a frontend for Project Gutenberg.
 
-More to come as I develop this.
+The intent here is to allow small, relatively dumb devices to be able to retrieve a curated (or semi-curated) small list of books and then make those available to the viewer.
 
-## Design Notes
+
+
+## Notes
 
 ### pkg/books is too big
 
 We have a rather odd data structure to draw from -- the Project Gutenberg database. It's an XML file format that has evolved over the years -- it's now a collection of individual files, each containing information about a single book. There's a single directory with over 65000 subdirectories, each containing an XML file. That's a lot of parsing and it takes over a minute to load all that data.
 
-Furthermore, although the data follows specific XML schema (called RDF), many times the schema named do not themselves exist! And in other cases, the schema are layered deep within some other specification. So I've had to do a bit of guessing to determine the meaning of all the fields.
+Furthermore, although the data follows specific XML schema (called RDF), many times the schema named do not themselves exist! And in other cases, the schema are layered deep within some other specification. So we've had to do a bit of guessing to determine the meaning of all the fields.
 
-The original hope was to cleanly separate the XML file reading code from the book data code -- but it proved challenging to keep them separated (the code to translate one to the other gets tricky), so I eventually gave up and moved the RDF loader/parser into the more general books package. Maybe someday we can move it back out.
+The original hope was to cleanly separate the XML file reading code from the book data code -- but it proved challenging to keep them separated (the code to translate one to the other gets tricky), so we eventually gave up and moved the RDF loader/parser into the more general books package. Maybe someday we can move it back out.
 
-The other thing I would have liked to do is to separate the data storage and make it more generic, but (see below) I also wanted this whole thing to run in memory and not have an external dependency for now. So that also ends up in the books package for now.
+The other thing we would have liked to do is to separate the data storage and make it more generic, but (see below) we also wanted this whole thing to run in memory and not have an external dependency for now. So that also ends up in the books package for now.
 
 ### Technical details
 
@@ -45,4 +47,12 @@ The other thing I would have liked to do is to separate the data storage and mak
 [This package](pkg/books) contains the code to load an "RDF" file which is a specific format of XML that is used by Project Gutenberg.
 [The offline catalogs page](http://www.gutenberg.org/ebooks/offline_catalogs.html) requests that this format be the one used for fetching data for offline uses.
 
+### Templates
 
+Go has two identical template systems, html/template and text/template. We're going to use one or both of these to deliver formatted content in some contexts. The API can sometimes deliver JSON to endpoints that are expecting to talk to an API, but we also want to support using this system as a web-based framework or perhaps just delivering some plain text.
+
+In an ideal world, it would be great to publish the template capability and allow clients to upload a template that formats data in the way they'd like to get it. But the reality is that doing so in a safe and secure manner is Certifiably Hard, so for now at least we'll be putting templates into a local folder and using only pre-existing templates to format the output. If you're a client and need some different data formats, please consider submitting a PR with a different template.
+
+### Accounts
+
+In order to be able to put this up on a public site and allow third party API access, it's important that we have API keys so that usage by specific accounts can be tracked and (if necessary) throttled to avoid overload. API keys can be requested by submitting an issue on this repository and are generated manually, so please allow sufficient time for a response. The most expensive queries will eventually require an API key in a header.

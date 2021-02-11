@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,41 +28,57 @@ func getWords(s string) []string {
 // If we decide we want some sort of external data store, we can put it here.
 // This is intended to be an opaque data structure; use accessors and query methods
 // to retrieve data.
-// The agentWords member is an index of individual words in the agent information so that
-// word-level queries can be fast.
 type BookData struct {
-	books []EBook
+	mu      sync.RWMutex
+	books   []EBook
+	bookIDs map[string]int
 }
 
 // NewBookData constructs a BookData object
 func NewBookData() *BookData {
 	return &BookData{
-		books: make([]EBook, 0),
+		books:   make([]EBook, 0),
+		bookIDs: make(map[string]int),
+	}
+}
+
+func (b *BookData) updateIDs(start int) {
+	for i := start; i < len(b.books); i++ {
+		b.bookIDs[b.books[i].ID] = i
 	}
 }
 
 // Add inserts one or more EBook entities into the BookData
 func (b *BookData) Add(bs ...EBook) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	start := len(b.books)
 	b.books = append(b.books, bs...)
+	b.updateIDs(start)
 }
 
 // Update replaces the entire contents of the BookData
 func (b *BookData) Update(bs []EBook) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.books = bs
+	b.updateIDs(0)
 }
 
 // NBooks returns the number of books in the dataset
 func (b *BookData) NBooks() int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	return len(b.books)
 }
 
 // Get retrieves a book by its ID, or returns false in its second argument.
 // This currently searches linearly; could easily be sped up with an ID index.
 func (b *BookData) Get(id string) (EBook, bool) {
-	for i := range b.books {
-		if b.books[i].ID == id {
-			return b.books[i], true
-		}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if ix, ok := b.bookIDs[id]; ok {
+		return b.books[ix], true
 	}
 	return EBook{}, false
 }
@@ -83,6 +100,9 @@ func (b *BookData) Stats() StatsData {
 		Languages: make(map[string]int),
 		Formats:   make(map[string]int),
 	}
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	for i := range b.books {
 		totalWordsInIndex += float64(b.books[i].Words.Length())
 		sd.TotalBooks++
@@ -123,6 +143,9 @@ func (b *BookData) Query(constraints *ConstraintSpec) []EBook {
 	replace := false
 	include := constraints.IncludeCombiner(constraints.Includes...)
 	exclude := constraints.ExcludeCombiner(constraints.Excludes...)
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	for k := range b.books {
 		if len(result) >= constraints.Limit {
 			if !constraints.Random {
@@ -159,6 +182,9 @@ func (b *BookData) Count(constraints *ConstraintSpec) int {
 	matchCount := 0
 	include := constraints.IncludeCombiner(constraints.Includes...)
 	exclude := constraints.ExcludeCombiner(constraints.Excludes...)
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	for k := range b.books {
 		// empty include list means include all; empty exclude list means exclude none
 		if len(constraints.Includes) == 0 || include(b.books[k]) {

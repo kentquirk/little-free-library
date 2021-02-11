@@ -3,8 +3,10 @@ package books
 import (
 	"compress/bzip2"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -145,3 +147,28 @@ func BenchmarkSubjectQuery(b *testing.B) {
 // BenchmarkSubjectQuery-12        	     318	   3739078 ns/op	  303261 B/op	    9451 allocs/op
 //
 // Basically, 3-7x improvement.
+
+func BenchmarkIDQuery(b *testing.B) {
+	loadTestData(books)
+	ids := make([]string, 0)
+
+	for trials := 0; len(ids) < 10 && trials < 100; trials++ {
+		n := rand.Intn(len(books.books))
+		id := fmt.Sprintf("ebooks/%d", n)
+		if _, ok := books.Get(id); ok {
+			ids = append(ids, id)
+		}
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		books.Get(ids[i%len(ids)])
+	}
+}
+
+// Result before adding ID index:
+// BenchmarkIDQuery-12    	   11635	    139067 ns/op	       0 B/op	       0 allocs/op
+//
+// After ID index:
+// BenchmarkIDQuery-12    	25529547	        50.5 ns/op	       0 B/op	       0 allocs/op
+//
+// Just a little faster. :)

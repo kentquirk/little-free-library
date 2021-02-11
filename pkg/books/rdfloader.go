@@ -83,7 +83,6 @@ func (r *Loader) load(rdr io.Reader) []EBook {
 			// only store objects we have files for
 			if len(et.Files) != 0 {
 				ebooks = append(ebooks, et)
-				// agents =
 			}
 		}
 	}
