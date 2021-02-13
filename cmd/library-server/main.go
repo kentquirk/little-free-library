@@ -46,7 +46,7 @@ type Config struct {
 	MaxLimit         int           `env:"MAXLIMIT" default:"100"`
 	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" default:"5s"`
 	Languages        []string      `env:"LANGUAGES" delimiter:"," default:"en"`
-	Formats          []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub"`
+	Formats          []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub,html_text"`
 	RefreshTime      time.Duration `env:"REFRESH_TIME" default:"23h17m"`
 	URL              string        `env:"URL" default:"/Users/kent/code/little-free-library/data/rdf-files.tar.bz2"`
 	LoadAtMost       int           `env:"LOAD_AT_MOST"`

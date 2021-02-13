@@ -9,7 +9,7 @@ import (
 )
 
 // WordPat is a pattern we use when we need to extract all the alphanumeric elements in a string
-var WordPat = regexp.MustCompile("[^a-z0-9]+")
+var WordPat = regexp.MustCompile("[^a-z0-9_]+")
 
 // I looked at eliminating "noise words" to reduce the size of the word indices, but it only
 // reduced it by 20%, and that didn't seem worth the extra logic and the reduced

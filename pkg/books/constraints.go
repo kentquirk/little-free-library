@@ -138,6 +138,11 @@ outer:
 		} else {
 			retfunc = testType(value)
 		}
+	case "format", "fmt":
+		if useRegexp {
+			return retfunc, false, errors.New("format constraint cannot be regexp")
+		}
+		retfunc = testFormat(value)
 	case "any":
 		if useRegexp {
 			retfunc = Or(matchCreator(pat), matchIllustrator(pat), matchTitle(pat), matchSubject(pat))

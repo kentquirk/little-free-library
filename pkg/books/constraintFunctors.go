@@ -154,6 +154,30 @@ func matchType(pat *regexp.Regexp) ConstraintFunctor {
 	}
 }
 
+func testFormat(value string) ConstraintFunctor {
+	wantedFmts := make([]string, 0)
+	for _, w := range GetWords(value) {
+		if f, ok := ContentTypes[w]; ok {
+			wantedFmts = append(wantedFmts, f)
+		}
+	}
+	if len(wantedFmts) == 0 {
+		return nilFunctor
+	}
+	return func(eb EBook) bool {
+		for ix := range eb.Files {
+			for _, fmt := range eb.Files[ix].Formats {
+				for _, wanted := range wantedFmts {
+					if fmt == wanted {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+}
+
 // tests languages for exact equality, and allows multiple languages
 // separated by period (.)
 func testLanguage(value string) ConstraintFunctor {
