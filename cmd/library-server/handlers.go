@@ -128,9 +128,35 @@ func (svc *service) buildConstraints(values url.Values) (*books.ConstraintSpec, 
 			case "random", "rand":
 				constraints.Random = true
 			default:
-				constraint, exclude, err := books.ConstraintFromText(k, v)
-				if err != nil {
-					return nil, echo.NewHTTPError(http.StatusBadRequest, "constraint error: "+err.Error())
+				var constraint books.ConstraintFunctor
+				exclude := false
+
+				// if there are multiple words in the query, use them all with an AND
+				words := books.GetWords(v)
+				switch len(words) {
+				case 0:
+					// no words at all, bad query
+					return nil, echo.NewHTTPError(http.StatusBadRequest, "invalid search string: "+v)
+				case 1:
+					// just one word, make a simple constraint
+					c, ex, err := books.ConstraintFromText(k, words[0])
+					if err != nil {
+						return nil, echo.NewHTTPError(http.StatusBadRequest, "constraint error: "+err.Error())
+					}
+					exclude = ex
+					constraint = c
+				default:
+					// multiple words, build an AND constraint
+					cs := make([]books.ConstraintFunctor, 0)
+					for _, word := range words {
+						c, ex, err := books.ConstraintFromText(k, word)
+						if err != nil {
+							return nil, echo.NewHTTPError(http.StatusBadRequest, "constraint error: "+err.Error())
+						}
+						cs = append(cs, c)
+						exclude = ex
+					}
+					constraint = books.And(cs...)
 				}
 				if exclude {
 					constraints.Excludes = append(constraints.Excludes, constraint)
@@ -185,16 +211,6 @@ func (svc *service) bookDetails(c echo.Context) error {
 	if strings.HasSuffix(c.Path(), "*") {
 		id = id[len(c.Path())-1:]
 	}
-	book, ok := svc.Books.Get(id)
-	if !ok {
-		return echo.NewHTTPError(http.StatusNotFound, "no book found with id "+id)
-	}
-	return c.JSON(http.StatusOK, book)
-}
-
-func (svc *service) bookByID(c echo.Context) error {
-	fmt.Println(c.Path())
-	id := c.Param("id")
 	book, ok := svc.Books.Get(id)
 	if !ok {
 		return echo.NewHTTPError(http.StatusNotFound, "no book found with id "+id)

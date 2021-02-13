@@ -41,7 +41,6 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/books/count", svc.bookCount)
 	e.GET("/books/query/html/:format", svc.bookQueryHTML)
 	e.GET("/books/stats", svc.bookStats)
-	e.GET("/book/:id", svc.bookByID)
 	e.GET("/book/details/*", svc.bookDetails)
 
 	e.GET("/qr", svc.qrcodegen)

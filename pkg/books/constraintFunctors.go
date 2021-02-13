@@ -63,7 +63,7 @@ func And(cfs ...ConstraintFunctor) ConstraintFunctor {
 // testWords evaluates a value to see if it even possibly matches any of the whole words
 // in the query before passing it on to a regexp-based matcher.
 func testWords(value string, matchGen ConstraintFunctorGen) ConstraintFunctor {
-	words := stringset.New().Add(getWords(value)...)
+	words := stringset.New().Add(GetWords(value)...)
 	pat, err := regexp.Compile(fmt.Sprintf(wholeWord, value))
 	if err != nil {
 		return nilFunctor

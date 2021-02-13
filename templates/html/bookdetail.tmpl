@@ -8,7 +8,7 @@
 {{end}}
 {{define "FULLITEM"}}
 <div class="item">
-    <span><i>{{.Title}}</i></span>
+    <span><a href="/book/details/{{.ID}}"><i>{{.Title}}</i></a></span>
     <span>by {{range $cr := .FullCreators}}{{template "AUTHORLINK" $cr}}{{end}}</span>
 </div>
 {{end}}

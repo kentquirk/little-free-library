@@ -35,9 +35,9 @@ type EBook struct {
 }
 
 func (e *EBook) extractWords() {
-	w := stringset.New().Add(getWords(e.Title)...)
+	w := stringset.New().Add(GetWords(e.Title)...)
 	for i := range e.Subjects {
-		w.Add(getWords(e.Subjects[i])...)
+		w.Add(GetWords(e.Subjects[i])...)
 	}
 	for _, v := range e.Agents {
 		v.AddWords(w)
@@ -68,8 +68,8 @@ type Agent struct {
 // AddWords the list of lower-case alphanumerics in the
 // Agent Name and Aliases to the given StringSet
 func (a Agent) AddWords(w *stringset.StringSet) {
-	w.Add(getWords(a.Name)...)
+	w.Add(GetWords(a.Name)...)
 	for i := range a.Aliases {
-		w.Add(getWords(a.Aliases[i])...)
+		w.Add(GetWords(a.Aliases[i])...)
 	}
 }

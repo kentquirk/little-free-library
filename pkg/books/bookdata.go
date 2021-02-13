@@ -20,7 +20,8 @@ var WordPat = regexp.MustCompile("[^a-z0-9]+")
 // 				0 1 2 3 4 5 6 7 8 9
 // 				`, -1)...)
 
-func getWords(s string) []string {
+// GetWords retrieves a lowercased list of alphanumeric strings from an input string
+func GetWords(s string) []string {
 	return WordPat.Split(strings.ToLower(s), -1)
 }
 
