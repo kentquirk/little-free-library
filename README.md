@@ -1,4 +1,7 @@
 # Little Free Library
+
+![Build](https://github.com/actions/hello-world/workflows/Build%20and%Test/badge.svg)
+
 Provides the support for the Digital Little Free Library project, which is a backend service that provides a frontend for Project Gutenberg.
 
 The intent here is to allow small, relatively dumb devices to be able to retrieve a curated (or semi-curated) small list of books and then make those available to the viewer.
