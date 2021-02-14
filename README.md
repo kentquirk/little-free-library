@@ -1,6 +1,6 @@
 # Little Free Library
 
-![Build](https://github.com/kentquirk/little-free-library/workflows/Build%20and%Test/badge.svg)
+![Build](https://github.com/kentquirk/little-free-library/workflows/Build%20and%20Test/badge.svg)
 
 Provides the support for the Digital Little Free Library project, which is a backend service that provides a frontend for Project Gutenberg.
 
