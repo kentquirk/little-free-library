@@ -170,6 +170,7 @@ func (svc *service) buildConstraints(values url.Values) (*books.ConstraintSpec, 
 }
 
 // bookQuery does a book query based on a query specification.
+// TODO: if an accept header is specified, format the result appropriately. For now we just do JSON.
 func (svc *service) bookQuery(c echo.Context) error {
 	constraints, err := svc.buildConstraints(c.QueryParams())
 	if err != nil {

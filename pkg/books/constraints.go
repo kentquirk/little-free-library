@@ -47,6 +47,9 @@ func createRegex(value string) (*regexp.Regexp, error) {
 // are preceded by a tilde (~) character.
 // For glob-style queries, the value is treated as a "glob"-style expression (see below).
 //
+// Format queries do not support globs, however, they do support a list of values separated by
+// a non-alphanumeric value like space or dot.
+//
 // Names can also be preceded by a hyphen (-) character, which means that the match is
 // inverted -- matched items are *excluded* from the results. If an item is included by
 // one constraint but excluded by another, the exclusion wins.
