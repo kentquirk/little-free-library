@@ -42,6 +42,7 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/books/query/html/:format", svc.bookQueryHTML)
 	e.GET("/books/stats", svc.bookStats)
 	e.GET("/book/details/*", svc.bookDetails)
+	e.GET("/choices/:field", svc.choices)
 
 	e.GET("/qr", svc.qrcodegen)
 	e.Static("/static", svc.Config.StaticRoot)

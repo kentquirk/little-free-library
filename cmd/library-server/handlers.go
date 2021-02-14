@@ -218,3 +218,40 @@ func (svc *service) bookDetails(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, book)
 }
+
+// choices returns a json collection of the possibilities for several fields
+// in a query:
+// formats -- all the values allowed for format
+// types -- all the types
+// languages -- all the languages
+// Note that all of these are dependent on the data actually loaded; allowed values of
+// these fields may well have been restricted during loading.
+func (svc *service) choices(c echo.Context) error {
+	switch c.Param("field") {
+	case "types", "type", "typ":
+		stats := svc.Books.Stats()
+		types := make([]string, 0)
+		for k := range stats.Types {
+			types = append(types, k)
+		}
+		return c.JSON(http.StatusOK, types)
+	case "formats", "format", "fmt":
+		stats := svc.Books.Stats()
+		ctypes := make(map[string]string)
+		for k, v := range books.ContentTypes {
+			if _, ok := stats.Formats[v]; ok {
+				ctypes[k] = v
+			}
+		}
+		return c.JSON(http.StatusOK, ctypes)
+	case "languages", "language", "lang":
+		stats := svc.Books.Stats()
+		langs := make([]string, 0)
+		for k := range stats.Languages {
+			langs = append(langs, k)
+		}
+		return c.JSON(http.StatusOK, langs)
+	default:
+		return echo.NewHTTPError(http.StatusBadRequest, "unrecognized field name")
+	}
+}

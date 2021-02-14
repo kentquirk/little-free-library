@@ -92,6 +92,7 @@ type StatsData struct {
 	AvgIndexSize float64        `json:"avg_index_size"`
 	Languages    map[string]int `json:"languages"`
 	Formats      map[string]int `json:"formats"`
+	Types        map[string]int `json:"types"`
 }
 
 // Stats returns aggregated information about the data being stored.
@@ -100,6 +101,7 @@ func (b *BookData) Stats() StatsData {
 	sd := StatsData{
 		Languages: make(map[string]int),
 		Formats:   make(map[string]int),
+		Types:     make(map[string]int),
 	}
 
 	b.mu.RLock()
@@ -109,6 +111,7 @@ func (b *BookData) Stats() StatsData {
 		sd.TotalBooks++
 		lang := b.books[i].Language
 		sd.Languages[lang]++
+		sd.Types[b.books[i].Type]++
 		for _, f := range b.books[i].Files {
 			for _, fmt := range f.Formats {
 				sd.TotalFiles++
