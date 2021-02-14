@@ -37,6 +37,7 @@ func createRegex(value string) (*regexp.Regexp, error) {
 // topic: value matches subject or title
 // any: value matches any of subject, title, creator, contributor
 // language: value matches 2- or 3-char language field, multiple values separated by .
+// format: one of the values matches one of the short codes of a format type for any of the formats of a given item
 //
 // All matches are case-insensitive. For non-glob queries, the specified string is tested at
 // word boundaries for the specified field or fields (including multi-valued fields).

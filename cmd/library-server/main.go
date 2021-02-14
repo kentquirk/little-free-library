@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/codingconcepts/env"
+	"github.com/honeycombio/beeline-go"
+	"github.com/honeycombio/beeline-go/wrappers/hnyecho"
 	"github.com/kentquirk/stringset/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -40,11 +42,13 @@ type Config struct {
 	ValidUsers       []string      `env:"VALID_USERS"`
 	AuthSecret       string        `env:"AUTH_SECRET"`
 	AuthSalt         string        `env:"AUTH_SALT" default:"This is sample salt."`
+	HoneycombKey     string        `env:"HONEYCOMB_APIKEY"`
+	HoneycombDataset string        `env:"HONEYCOMB_DATASET" default:"little-free-library"`
 	CacheDir         string        `env:"CACHE_DIR" default:"/var/www/.cache"`
 	StaticRoot       string        `env:"STATIC_ROOT" required:"true"`
 	Port             int           `env:"PORT" required:"true"`
 	MaxLimit         int           `env:"MAXLIMIT" default:"100"`
-	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" default:"5s"`
+	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" default:"10s"`
 	Languages        []string      `env:"LANGUAGES" delimiter:"," default:"en"`
 	Formats          []string      `env:"FORMATS" delimiter:"," default:"plain_8859.1,plain_ascii,plain_utf8,mobi,epub,html_text"`
 	RefreshTime      time.Duration `env:"REFRESH_TIME" default:"23h17m"`
@@ -75,7 +79,17 @@ func authValidator(cfg Config) func(key string, c echo.Context) (bool, error) {
 	}
 }
 
-func setupMiddleware(e *echo.Echo, cfg Config) {
+// returns a function that should be run when the server exits
+func setupMiddleware(e *echo.Echo, cfg Config) func() {
+	if cfg.HoneycombKey != "" {
+		// we need to set up honeycomb
+		beeline.Init(beeline.Config{
+			WriteKey: cfg.HoneycombKey,
+			Dataset:  cfg.HoneycombDataset,
+		})
+		e.Use(hnyecho.New().Middleware())
+	}
+
 	e.Use(
 		// don't allow big bodies to choke us
 		middleware.BodyLimit("64K"),
@@ -95,6 +109,13 @@ func setupMiddleware(e *echo.Echo, cfg Config) {
 		}),
 		// TODO: add rate limiter
 	)
+
+	// return a function for the caller to defer()
+	return func() {
+		if cfg.HoneycombKey != "" {
+			beeline.Close()
+		}
+	}
 }
 
 func main() {
@@ -110,7 +131,10 @@ func main() {
 	// TODO: put dircache in config
 	e.AutoTLSManager.Cache = autocert.DirCache(svc.Config.CacheDir)
 
-	setupMiddleware(e, svc.Config)
+	// our setup routine may need to name some things to run on exit
+	deferfunc := setupMiddleware(e, svc.Config)
+	defer deferfunc()
+
 	svc.setupRoutes(e)
 	e.Renderer = svc
 
@@ -136,6 +160,7 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 
+	beeline.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), svc.Config.ShutdownTimeout)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {
