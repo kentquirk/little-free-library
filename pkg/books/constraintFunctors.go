@@ -8,17 +8,6 @@ import (
 	"github.com/kentquirk/stringset/v2"
 )
 
-// ConstraintFunctor is the type of the function used to evaluate a constraint.
-// We need to benchmark to see if it would make a difference to make it
-// take a pointer.
-type ConstraintFunctor func(EBook) bool
-
-// ConstraintFunctorGen is a function that generates a ConstraintFunctor from a pattern.
-type ConstraintFunctorGen func(pat *regexp.Regexp) ConstraintFunctor
-
-// ConstraintCombiner is an operator that can combine a set of constraints, like AND or OR.
-type ConstraintCombiner func(...ConstraintFunctor) ConstraintFunctor
-
 func nilFunctor(EBook) bool {
 	return false
 }

@@ -160,7 +160,6 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 
-	beeline.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), svc.Config.ShutdownTimeout)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {
