@@ -5,6 +5,8 @@ import (
 	"encoding/xml"
 	"io"
 	"log"
+
+	"github.com/kentquirk/little-free-library/pkg/booktypes"
 )
 
 // Loader loads an RDF file given a reader to it
@@ -27,7 +29,7 @@ func NewLoader(r io.Reader, options ...LoaderOption) *Loader {
 	}
 	// if after this there are no ebookFilters, add a dummy one that passes everything
 	if len(loader.ebookFilters) == 0 {
-		loader.ebookFilters = []EBookFilter{func(*EBook) bool { return true }}
+		loader.ebookFilters = []EBookFilter{func(*booktypes.EBook) bool { return true }}
 	}
 
 	return loader
@@ -55,7 +57,7 @@ func LoadAtMostOpt(n int) LoaderOption {
 }
 
 // load is a helper function used by the Load functions
-func (r *Loader) load(rdr io.Reader) []EBook {
+func (r *Loader) load(rdr io.Reader) []booktypes.EBook {
 	var data xmlRdf
 	decoder := xml.NewDecoder(rdr)
 	if err := decoder.Decode(&data); err != nil {
@@ -63,7 +65,7 @@ func (r *Loader) load(rdr io.Reader) []EBook {
 	}
 
 	// Go through the ebooks and keep the ones that pass the filter
-	ebooks := make([]EBook, 0)
+	ebooks := make([]booktypes.EBook, 0)
 	for i := range data.EBooks {
 		et := data.EBooks[i].asEBook()
 		for _, filt := range r.ebookFilters {
@@ -107,7 +109,7 @@ func (r *Loader) LoadOne(bookdata *BookData) int {
 func (r *Loader) LoadTar(bookdata *BookData) int {
 	count := 0
 	tr := tar.NewReader(r.reader)
-	ebooks := make([]EBook, 0)
+	ebooks := make([]booktypes.EBook, 0)
 	for {
 		_, err := tr.Next()
 		if err == io.EOF {

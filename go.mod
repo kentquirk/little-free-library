@@ -1,6 +1,6 @@
 module github.com/kentquirk/little-free-library
 
-go 1.15
+go 1.16
 
 require (
 	github.com/codingconcepts/env v0.0.0-20200821220118-a8fbf8d84482

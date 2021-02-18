@@ -5,10 +5,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kentquirk/little-free-library/pkg/booktypes"
+	"github.com/kentquirk/little-free-library/pkg/date"
 	"github.com/kentquirk/stringset/v2"
 )
 
-func nilFunctor(EBook) bool {
+func nilFunctor(booktypes.EBook) bool {
 	return false
 }
 
@@ -22,7 +24,7 @@ func Or(cfs ...ConstraintFunctor) ConstraintFunctor {
 	if len(cfs) == 0 {
 		return nilFunctor
 	}
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		for _, cf := range cfs {
 			if cf(eb) {
 				return true
@@ -39,7 +41,7 @@ func And(cfs ...ConstraintFunctor) ConstraintFunctor {
 	if len(cfs) == 0 {
 		return nilFunctor
 	}
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		for _, cf := range cfs {
 			if !cf(eb) {
 				return false
@@ -52,12 +54,12 @@ func And(cfs ...ConstraintFunctor) ConstraintFunctor {
 // testWords evaluates a value to see if it even possibly matches any of the whole words
 // in the query before passing it on to a regexp-based matcher.
 func testWords(value string, matchGen ConstraintFunctorGen) ConstraintFunctor {
-	words := stringset.New().Add(GetWords(value)...)
+	words := stringset.New().Add(booktypes.GetWords(value)...)
 	pat, err := regexp.Compile(fmt.Sprintf(wholeWord, value))
 	if err != nil {
 		return nilFunctor
 	}
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		if words.Intersection(eb.Words).Length() != words.Length() {
 			return false
 		}
@@ -69,7 +71,7 @@ func testWords(value string, matchGen ConstraintFunctorGen) ConstraintFunctor {
 }
 
 func matchCreator(pat *regexp.Regexp) ConstraintFunctor {
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		for _, s := range eb.Creators {
 			if pat.MatchString(eb.Agents[s].Name) {
 				return true
@@ -88,7 +90,7 @@ func matchCreator(pat *regexp.Regexp) ConstraintFunctor {
 func testIllustrator(value string) ConstraintFunctor {
 	// Build this outside the functor for efficiency.
 	testfunc := testWords(value, matchIllustrator)
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		if len(eb.Illustrators) == 0 {
 			return false
 		}
@@ -97,7 +99,7 @@ func testIllustrator(value string) ConstraintFunctor {
 }
 
 func matchIllustrator(pat *regexp.Regexp) ConstraintFunctor {
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		for _, s := range eb.Illustrators {
 			if pat.MatchString(eb.Agents[s].Name) {
 				return true
@@ -113,7 +115,7 @@ func matchIllustrator(pat *regexp.Regexp) ConstraintFunctor {
 }
 
 func matchSubject(pat *regexp.Regexp) ConstraintFunctor {
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		for _, s := range eb.Subjects {
 			if pat.MatchString(s) {
 				return true
@@ -124,7 +126,7 @@ func matchSubject(pat *regexp.Regexp) ConstraintFunctor {
 }
 
 func matchTitle(pat *regexp.Regexp) ConstraintFunctor {
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		return pat.MatchString(eb.Title)
 	}
 }
@@ -138,14 +140,14 @@ func testType(value string) ConstraintFunctor {
 }
 
 func matchType(pat *regexp.Regexp) ConstraintFunctor {
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		return pat.MatchString(eb.Type)
 	}
 }
 
 func testFormat(value string) ConstraintFunctor {
 	wantedFmts := make([]string, 0)
-	for _, w := range GetWords(value) {
+	for _, w := range booktypes.GetWords(value) {
 		if f, ok := ContentTypes[w]; ok {
 			wantedFmts = append(wantedFmts, f)
 		}
@@ -153,7 +155,7 @@ func testFormat(value string) ConstraintFunctor {
 	if len(wantedFmts) == 0 {
 		return nilFunctor
 	}
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		for ix := range eb.Files {
 			for _, fmt := range eb.Files[ix].Formats {
 				for _, wanted := range wantedFmts {
@@ -170,7 +172,7 @@ func testFormat(value string) ConstraintFunctor {
 // tests languages for exact equality, and allows multiple languages
 // separated by period (.)
 func testLanguage(value string) ConstraintFunctor {
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		for _, l := range strings.Split(value, ".") {
 			if eb.Language == l {
 				return true
@@ -193,10 +195,10 @@ const (
 // testIssued checks the book's Issued date
 func testIssued(value string, cmp yearComparison) ConstraintFunctor {
 	if value == "" {
-		return func(eb EBook) bool { return true }
+		return func(eb booktypes.EBook) bool { return true }
 	}
-	return func(eb EBook) bool {
-		d, _ := ParseDate(value)
+	return func(eb booktypes.EBook) bool {
+		d, _ := date.ParseDate(value)
 		switch cmp {
 		case yearEQ:
 			return eb.Issued.CompareTo(d) == 0
@@ -214,13 +216,13 @@ func testIssued(value string, cmp yearComparison) ConstraintFunctor {
 // CopyrightDates fits the comparison, the result is true
 func testCopyright(value string, cmp yearComparison) ConstraintFunctor {
 	if value == "" {
-		return func(eb EBook) bool { return true }
+		return func(eb booktypes.EBook) bool { return true }
 	}
-	return func(eb EBook) bool {
+	return func(eb booktypes.EBook) bool {
 		if len(eb.CopyrightDates) == 0 {
 			return false
 		}
-		d, _ := ParseDate(value)
+		d, _ := date.ParseDate(value)
 		for _, cd := range eb.CopyrightDates {
 			switch cmp {
 			case yearEQ:

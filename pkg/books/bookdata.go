@@ -2,28 +2,11 @@ package books
 
 import (
 	"math/rand"
-	"regexp"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/kentquirk/little-free-library/pkg/booktypes"
 )
-
-// WordPat is a pattern we use when we need to extract all the alphanumeric elements in a string
-var WordPat = regexp.MustCompile("[^a-z0-9_]+")
-
-// I looked at eliminating "noise words" to reduce the size of the word indices, but it only
-// reduced it by 20%, and that didn't seem worth the extra logic and the reduced
-// precision of the search.
-// var noiseWords = stringset.New().Add(WordPat.Split(`
-// 				an and but is it of or the to
-// 				a b c d e f g h i j k l m n o p q r s t u v w x y z
-// 				0 1 2 3 4 5 6 7 8 9
-// 				`, -1)...)
-
-// GetWords retrieves a lowercased list of alphanumeric strings from an input string
-func GetWords(s string) []string {
-	return WordPat.Split(strings.ToLower(s), -1)
-}
 
 // BookData is the type that we use to contain the book data and wrap all the queries.
 // If we decide we want some sort of external data store, we can put it here.
@@ -31,14 +14,14 @@ func GetWords(s string) []string {
 // to retrieve data.
 type BookData struct {
 	mu      sync.RWMutex
-	books   []EBook
+	books   []booktypes.EBook
 	bookIDs map[string]int
 }
 
 // NewBookData constructs a BookData object
 func NewBookData() *BookData {
 	return &BookData{
-		books:   make([]EBook, 0),
+		books:   make([]booktypes.EBook, 0),
 		bookIDs: make(map[string]int),
 	}
 }
@@ -50,7 +33,7 @@ func (b *BookData) updateIDs(start int) {
 }
 
 // Add inserts one or more EBook entities into the BookData
-func (b *BookData) Add(bs ...EBook) {
+func (b *BookData) Add(bs ...booktypes.EBook) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	start := len(b.books)
@@ -59,7 +42,7 @@ func (b *BookData) Add(bs ...EBook) {
 }
 
 // Update replaces the entire contents of the BookData
-func (b *BookData) Update(bs []EBook) {
+func (b *BookData) Update(bs []booktypes.EBook) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.books = bs
@@ -75,13 +58,13 @@ func (b *BookData) NBooks() int {
 
 // Get retrieves a book by its ID, or returns false in its second argument.
 // This currently searches linearly; could easily be sped up with an ID index.
-func (b *BookData) Get(id string) (EBook, bool) {
+func (b *BookData) Get(id string) (booktypes.EBook, bool) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if ix, ok := b.bookIDs[id]; ok {
 		return b.books[ix], true
 	}
-	return EBook{}, false
+	return booktypes.EBook{}, false
 }
 
 // StatsData is the data structure used to return collection-level information
@@ -134,8 +117,8 @@ func (b *BookData) Stats() StatsData {
 // Then, when reading the m-th item I (m>n now), we keep it with probability n/m.
 // When we keep it, we select item U uniformly at random from S, and replace
 // U with I.
-func (b *BookData) Query(constraints *ConstraintSpec) []EBook {
-	result := make([]EBook, 0)
+func (b *BookData) Query(constraints *ConstraintSpec) []booktypes.EBook {
+	result := make([]booktypes.EBook, 0)
 
 	// create the random number generator only if we need it
 	var random *rand.Rand

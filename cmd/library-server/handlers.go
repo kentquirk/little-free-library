@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/kentquirk/little-free-library/pkg/books"
+	"github.com/kentquirk/little-free-library/pkg/booktypes"
 	"github.com/labstack/echo/v4"
 	"github.com/skip2/go-qrcode"
 )
@@ -132,7 +133,7 @@ func (svc *service) buildConstraints(values url.Values) (*books.ConstraintSpec, 
 				exclude := false
 
 				// if there are multiple words in the query, use them all with an AND
-				words := books.GetWords(v)
+				words := booktypes.GetWords(v)
 				switch len(words) {
 				case 0:
 					// no words at all, bad query

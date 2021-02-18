@@ -2,19 +2,22 @@ package books
 
 import (
 	"testing"
+
+	"github.com/kentquirk/little-free-library/pkg/booktypes"
+	"github.com/kentquirk/little-free-library/pkg/date"
 )
 
 // We don't need all the fields for our testing
-func testEBook() []EBook {
-	ebs := []EBook{
+func testEBook() []booktypes.EBook {
+	ebs := []booktypes.EBook{
 		{
 			ID:       "a",
 			Title:    "Evelyn's Story",
 			Creators: []string{"a"},
 			Language: "en",
 			Subjects: []string{"Biography"},
-			Issued:   Date{2005, 7, 18},
-			Agents: map[string]Agent{
+			Issued:   date.Build(2005, 7, 18),
+			Agents: map[string]booktypes.Agent{
 				"a": {Name: "Evelyn Excellent"},
 			},
 		},
@@ -24,8 +27,8 @@ func testEBook() []EBook {
 			Creators: []string{"h"},
 			Language: "rap",
 			Subjects: []string{"History - Fiction", "History - Play", "Musical"},
-			Issued:   Date{2016, 12, 25},
-			Agents: map[string]Agent{
+			Issued:   date.Build(2016, 12, 25),
+			Agents: map[string]booktypes.Agent{
 				"h": {Name: "Lin-Manuel Miranda"},
 			},
 		},
@@ -35,8 +38,8 @@ func testEBook() []EBook {
 			Illustrators: []string{"w1", "w2"},
 			Language:     "en",
 			Subjects:     []string{"Comics -- Fiction"},
-			Issued:       Date{2018, 10, 10},
-			Agents: map[string]Agent{
+			Issued:       date.Build(2018, 10, 10),
+			Agents: map[string]booktypes.Agent{
 				"w1": {Name: "Lynda Carter"},
 				"w2": {Name: "Gal Gadot"},
 			},
@@ -47,14 +50,14 @@ func testEBook() []EBook {
 			Creators: []string{"e"},
 			Language: "en",
 			Subjects: []string{"Music", "Religion"},
-			Issued:   Date{1998, 1, 1},
-			Agents: map[string]Agent{
+			Issued:   date.Build(1998, 1, 1),
+			Agents: map[string]booktypes.Agent{
 				"e": {Name: "Eve"},
 			},
 		},
 	}
 	for i := range ebs {
-		ebs[i].extractWords()
+		ebs[i].ExtractWords()
 	}
 	return ebs
 }

@@ -1,4 +1,4 @@
-package books
+package date
 
 import (
 	"encoding/json"
@@ -8,11 +8,21 @@ import (
 	"time"
 )
 
-// Date represents a date without time information; it can represent only a year.
+// Date represents a date without time information; it may represent only a year
+// (month and day may be zero, comparisons work correctly in this case).
 type Date struct {
 	Year  int
 	Month int
 	Day   int
+}
+
+// Build creates a Date from year, month, day
+func Build(year, month, day int) Date {
+	return Date{
+		Year:  year,
+		Month: month,
+		Day:   day,
+	}
 }
 
 // AsTime converts the date object into the best representation of a time.Time
@@ -90,8 +100,8 @@ func AsDate(t time.Time) Date {
 // If none are found, it returns a zero date.
 // It also returns an index into the string pointing past the date that was found.
 // If no date was found, the index is 0.
-// The regex and logic are fairly finicky, which avoids lots of cases perhaps at
-// the expense of clarity.
+// The regex and logic are fairly finicky, which avoids lots of conditionals (perhaps at
+// the expense of clarity).
 func ParseDate(s string) (Date, int) {
 	// look for a 4-digit year that is not part of a longer string
 	patYMD := regexp.MustCompile(`\b([0-9]{4})([./-]([0-9]{1,2})[./-]([0-9]{1,2}))?\b`)
@@ -106,6 +116,12 @@ func ParseDate(s string) (Date, int) {
 		return Date{Year: y}, ixs[1]
 	}
 	return Date{}, 0
+}
+
+// ParseOnly calls ParseDate and ignores its returned index.
+func ParseOnly(s string) Date {
+	date, _ := ParseDate(s)
+	return date
 }
 
 // ParseAllDates returns a slice of Date objects found in the given string.

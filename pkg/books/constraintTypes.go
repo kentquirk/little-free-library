@@ -1,11 +1,15 @@
 package books
 
-import "regexp"
+import (
+	"regexp"
+
+	"github.com/kentquirk/little-free-library/pkg/booktypes"
+)
 
 // ConstraintFunctor is the type of the function used to evaluate a constraint.
 // We need to benchmark to see if it would make a difference to make it
 // take a pointer.
-type ConstraintFunctor func(EBook) bool
+type ConstraintFunctor func(booktypes.EBook) bool
 
 // ConstraintFunctorGen is a function that generates a ConstraintFunctor from a pattern.
 type ConstraintFunctorGen func(pat *regexp.Regexp) ConstraintFunctor

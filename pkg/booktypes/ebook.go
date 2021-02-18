@@ -1,16 +1,28 @@
-package books
+package booktypes
 
-import "github.com/kentquirk/stringset/v2"
+import (
+	"regexp"
+	"strings"
 
-// PGFile is the parsed and processed structure of an object
-// within the Project Gutenberg data that corresponds to a single
-// downloadable entity -- a particular version of the content.
-type PGFile struct {
-	Location string   `json:"location,omitempty"`
-	Formats  []string `json:"formats,omitempty"`
-	FileSize int      `json:"filesize,omitempty"`
-	Modified Date     `json:"modified,omitempty"`
-	BookID   string   `json:"bookid,omitempty"`
+	"github.com/kentquirk/little-free-library/pkg/date"
+	"github.com/kentquirk/stringset/v2"
+)
+
+// wordPat is a pattern we use when we need to extract all the alphanumeric elements in a string
+var wordPat = regexp.MustCompile("[^a-z0-9_]+")
+
+// I looked at eliminating "noise words" to reduce the size of the word indices, but it only
+// reduced it by 20%, and that didn't seem worth the extra logic and the reduced
+// precision of the search.
+// var noiseWords = stringset.New().Add(wordPat.Split(`
+// 				an and but is it of or the to
+// 				a b c d e f g h i j k l m n o p q r s t u v w x y z
+// 				0 1 2 3 4 5 6 7 8 9
+// 				`, -1)...)
+
+// GetWords retrieves a lowercased list of alphanumeric strings from an input string
+func GetWords(s string) []string {
+	return wordPat.Split(strings.ToLower(s), -1)
 }
 
 // EBook is the parsed and processed structure of an ebook object.
@@ -23,7 +35,7 @@ type EBook struct {
 	TableOfContents string               `json:"table_of_contents,omitempty"`
 	Language        string               `json:"language,omitempty"`
 	Subjects        []string             `json:"subjects,omitempty"`
-	Issued          Date                 `json:"issued,omitempty"`
+	Issued          date.Date            `json:"issued,omitempty"`
 	DownloadCount   int                  `json:"download_count,omitempty"`
 	Rights          string               `json:"rights,omitempty"`
 	Copyright       string               `json:"copyright,omitempty"`
@@ -31,11 +43,12 @@ type EBook struct {
 	Type            string               `json:"type,omitempty"`
 	Files           []PGFile             `json:"files,omitempty"`
 	Agents          map[string]Agent     `json:"agents,omitempty"`
-	CopyrightDates  []Date               `json:"-"`
+	CopyrightDates  []date.Date          `json:"-"`
 	Words           *stringset.StringSet `json:"-"`
 }
 
-func (e *EBook) extractWords() {
+// ExtractWords retrieves a stringSet of individual words
+func (e *EBook) ExtractWords() {
 	w := stringset.New().Add(GetWords(e.Title)...)
 	for i := range e.Subjects {
 		w.Add(GetWords(e.Subjects[i])...)
@@ -53,24 +66,4 @@ func (e *EBook) FullCreators() []Agent {
 		agents = append(agents, e.Agents[agent])
 	}
 	return agents
-}
-
-// Agent is a record for a human (Project Gutenberg calls these agents).
-// This can be an author, editor, or illustrator.
-type Agent struct {
-	ID        string   `json:"id,omitempty"`
-	Name      string   `json:"name,omitempty"`
-	Aliases   []string `json:"aliases,omitempty"`
-	BirthDate Date     `json:"birth_date,omitempty"`
-	DeathDate Date     `json:"death_date,omitempty"`
-	Webpages  []string `json:"webpages,omitempty"`
-}
-
-// AddWords the list of lower-case alphanumerics in the
-// Agent Name and Aliases to the given StringSet
-func (a Agent) AddWords(w *stringset.StringSet) {
-	w.Add(GetWords(a.Name)...)
-	for i := range a.Aliases {
-		w.Add(GetWords(a.Aliases[i])...)
-	}
 }

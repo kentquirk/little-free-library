@@ -3,6 +3,9 @@ package books
 import (
 	"encoding/xml"
 	"strings"
+
+	"github.com/kentquirk/little-free-library/pkg/booktypes"
+	"github.com/kentquirk/little-free-library/pkg/date"
 )
 
 // xmlEbook represents a single "ebook" object as read from the gutenberg catalog.
@@ -64,23 +67,14 @@ type xmlFile struct {
 	} `xml:"isFormatOf"`
 }
 
-const xmlDateFormat = "2006-01-02"
-
-func mustDate(s string) Date {
-	if date, ix := ParseDate(s); ix != 0 {
-		return date
-	}
-	return Date{}
-}
-
 // asAgent generates an Agent from an xmlAgent
-func (x *xmlAgent) asAgent() Agent {
-	agent := Agent{
+func (x *xmlAgent) asAgent() booktypes.Agent {
+	agent := booktypes.Agent{
 		ID:        x.ID,
 		Name:      x.Name,
 		Aliases:   x.Alias,
-		BirthDate: mustDate(x.Birthdate.Text),
-		DeathDate: mustDate(x.Deathdate.Text),
+		BirthDate: date.ParseOnly(x.Birthdate.Text),
+		DeathDate: date.ParseOnly(x.Deathdate.Text),
 		Webpages:  make([]string, 0),
 	}
 	for _, wp := range x.Webpage {
@@ -90,8 +84,8 @@ func (x *xmlAgent) asAgent() Agent {
 }
 
 // asEBook generates an EBook from an xmlEBook
-func (x *xmlEbook) asEBook() EBook {
-	eb := EBook{
+func (x *xmlEbook) asEBook() booktypes.EBook {
+	eb := booktypes.EBook{
 		ID:              x.ID,
 		Publisher:       x.Publisher,
 		Title:           x.Title,
@@ -102,11 +96,12 @@ func (x *xmlEbook) asEBook() EBook {
 		DownloadCount:   x.Downloads,
 		Rights:          x.Rights,
 		Copyright:       x.Copyright,
-		CopyrightDates:  ParseAllDates(x.Copyright),
+		CopyrightDates:  date.ParseAllDates(x.Copyright),
 		Edition:         x.Edition,
 		Type:            x.Type,
-		Files:           make([]PGFile, 0, 4),
-		Agents:          make(map[string]Agent),
+		Files:           make([]booktypes.PGFile, 0, 4),
+		Issued:          date.ParseOnly(x.Issued),
+		Agents:          make(map[string]booktypes.Agent),
 		Words:           nil,
 	}
 	for i := range x.Creators {
@@ -122,19 +117,18 @@ func (x *xmlEbook) asEBook() EBook {
 			eb.Subjects = append(eb.Subjects, x.Subjects[i].Description.Subject)
 		}
 	}
-	eb.Issued, _ = ParseDate(x.Issued)
-	eb.extractWords()
+	eb.ExtractWords()
 	return eb
 }
 
-func (x *xmlFile) asFile() PGFile {
-	f := PGFile{
+func (x *xmlFile) asFile() booktypes.PGFile {
+	f := booktypes.PGFile{
 		Location: x.About,
 		Formats:  x.Formats,
 		FileSize: x.Extent,
 		BookID:   x.IsFormatOf.Resource,
+		Modified: date.ParseOnly(x.Modified),
 	}
-	f.Modified, _ = ParseDate(x.Modified)
 
 	return f
 }
