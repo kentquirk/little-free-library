@@ -129,10 +129,10 @@ func (x *xmlEbook) asEBook() EBook {
 
 func (x *xmlFile) asFile() PGFile {
 	f := PGFile{
-		Location:   x.About,
-		Formats:    x.Formats,
-		FileSize:   x.Extent,
-		IsFormatOf: x.IsFormatOf.Resource,
+		Location: x.About,
+		Formats:  x.Formats,
+		FileSize: x.Extent,
+		BookID:   x.IsFormatOf.Resource,
 	}
 	f.Modified, _ = ParseDate(x.Modified)
 

@@ -45,7 +45,11 @@ func (svc *service) setupRoutes(e *echo.Echo) {
 	e.GET("/choices/:field", svc.choices)
 
 	e.GET("/qr", svc.qrcodegen)
-	e.Static("/static", svc.Config.StaticRoot)
+
+	// only do static service if a static path is specified
+	if svc.Config.StaticRoot != "" {
+		e.Static("/static", svc.Config.StaticRoot)
+	}
 }
 
 // load is intended to be run as a goroutine and also schedules itself to be re-run later.

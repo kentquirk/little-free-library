@@ -2,17 +2,18 @@ package books
 
 import "github.com/kentquirk/stringset/v2"
 
-// PGFile is the parsed and processed structure of an xmlFile object
-// within the Project Gutenberg data.
+// PGFile is the parsed and processed structure of an object
+// within the Project Gutenberg data that corresponds to a single
+// downloadable entity -- a particular version of the content.
 type PGFile struct {
-	Location   string   `json:"location,omitempty"`
-	Formats    []string `json:"formats,omitempty"`
-	FileSize   int      `json:"filesize,omitempty"`
-	Modified   Date     `json:"modified,omitempty"`
-	IsFormatOf string   `json:"isformatof,omitempty"`
+	Location string   `json:"location,omitempty"`
+	Formats  []string `json:"formats,omitempty"`
+	FileSize int      `json:"filesize,omitempty"`
+	Modified Date     `json:"modified,omitempty"`
+	BookID   string   `json:"bookid,omitempty"`
 }
 
-// EBook is the parsed and processed structure of an ebook object as defined in the XML.
+// EBook is the parsed and processed structure of an ebook object.
 type EBook struct {
 	ID              string               `json:"id,omitempty"`
 	Publisher       string               `json:"publisher,omitempty"`

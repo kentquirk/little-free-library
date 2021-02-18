@@ -22,10 +22,11 @@ import (
 
 // Config stores configuration variables that can be specified in the environment.
 // They are:
-// PORT (required). Specifies the port number. If the port number is 443, we automatically do a TLS setup and
+// PORT. Specifies the port number (default is 5000). If the port number is 443, we automatically do a TLS setup and
 //   get a certificate from Let's Encrypt. Otherwise, we just do a normal HTTP setup.
 // CACHE_DIR (default:"/var/www/.cache"). Specifies where on disk the cache information for TLS/Let's Encrypt is stored.
-// STATIC_ROOT (no default). Specifies the path that should be statically served. There is no safe default.
+// STATIC_ROOT (no default). Specifies the path that should be statically served. There is no safe default; if this
+//   value is not specified, then no static files will be served and the /static path will return 404s.
 // MAXLIMIT (default 100). The maximum number of items that can be returned at once, even if the query
 //   specifies a limit value.
 // SHUTDOWN_TIMEOUT (default 5s): maximum time the server will wait to try to shutdown nicely when interrupted.
@@ -45,8 +46,8 @@ type Config struct {
 	HoneycombKey     string        `env:"HONEYCOMB_APIKEY"`
 	HoneycombDataset string        `env:"HONEYCOMB_DATASET" default:"little-free-library"`
 	CacheDir         string        `env:"CACHE_DIR" default:"/var/www/.cache"`
-	StaticRoot       string        `env:"STATIC_ROOT" required:"true"`
-	Port             int           `env:"PORT" required:"true"`
+	StaticRoot       string        `env:"STATIC_ROOT"`
+	Port             int           `env:"PORT" default:"5000"`
 	MaxLimit         int           `env:"MAXLIMIT" default:"100"`
 	ShutdownTimeout  time.Duration `env:"SHUTDOWN_TIMEOUT" default:"10s"`
 	Languages        []string      `env:"LANGUAGES" delimiter:"," default:"en"`
