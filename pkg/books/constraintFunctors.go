@@ -7,6 +7,7 @@ import (
 
 	"github.com/kentquirk/little-free-library/pkg/booktypes"
 	"github.com/kentquirk/little-free-library/pkg/date"
+	"github.com/kentquirk/little-free-library/pkg/rdf"
 	"github.com/kentquirk/stringset/v2"
 )
 
@@ -148,7 +149,7 @@ func matchType(pat *regexp.Regexp) ConstraintFunctor {
 func testFormat(value string) ConstraintFunctor {
 	wantedFmts := make([]string, 0)
 	for _, w := range booktypes.GetWords(value) {
-		if f, ok := ContentTypes[w]; ok {
+		if f, ok := rdf.ContentTypes[w]; ok {
 			wantedFmts = append(wantedFmts, f)
 		}
 	}

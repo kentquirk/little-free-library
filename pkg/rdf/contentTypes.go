@@ -1,4 +1,4 @@
-package books
+package rdf
 
 // ContentTypes are friendly names for the data file formats that occur in the dataset.
 var ContentTypes = map[string]string{

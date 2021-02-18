@@ -9,6 +9,7 @@ import (
 
 	"github.com/kentquirk/little-free-library/pkg/books"
 	"github.com/kentquirk/little-free-library/pkg/booktypes"
+	"github.com/kentquirk/little-free-library/pkg/rdf"
 	"github.com/labstack/echo/v4"
 	"github.com/skip2/go-qrcode"
 )
@@ -239,7 +240,7 @@ func (svc *service) choices(c echo.Context) error {
 	case "formats", "format", "fmt":
 		stats := svc.Books.Stats()
 		ctypes := make(map[string]string)
-		for k, v := range books.ContentTypes {
+		for k, v := range rdf.ContentTypes {
 			if _, ok := stats.Formats[v]; ok {
 				ctypes[k] = v
 			}

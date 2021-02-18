@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/kentquirk/little-free-library/pkg/books"
+	"github.com/kentquirk/little-free-library/pkg/rdf"
 	"github.com/labstack/echo/v4"
 )
 
@@ -113,20 +114,28 @@ func load(svc *service) {
 	// now we have an uncompressed reader, we can start loading data from it
 	count := 0
 	starttime := time.Now()
-	r := books.NewLoader(rdr,
+	r := rdf.NewLoader(rdr,
 		// We don't want to be delivering data that our users can't use, so we pre-filter the data that goes
 		// into the dataset. The target language(s) and target formats can be specified in the config, and
 		// only the data that meets these specifications will be saved.
-		books.EBookFilterOpt(books.LanguageFilter(svc.Config.Languages...)),
-		books.PGFileFilterOpt(books.ContentFilter(svc.Config.Formats...)),
-		books.LoadAtMostOpt(svc.Config.LoadAtMost),
+		rdf.EBookFilterOpt(rdf.LanguageFilter(svc.Config.Languages...)),
+		rdf.PGFileFilterOpt(rdf.ContentFilter(svc.Config.Formats...)),
+		rdf.LoadAtMostOpt(svc.Config.LoadAtMost),
 	)
 
 	if strings.HasSuffix(resourcename, ".tar") {
-		count = r.LoadTar(svc.Books)
+		ebooks, n := r.LoadTar()
+		count = n
+		if n > 0 {
+			svc.Books.Update(ebooks)
+		}
 	} else {
+		// This parses and loads the XML data, expecting the contents to
+		// be a single file containing one or more EBook entities.
 		// this is mainly useful for testing and debugging without waiting for big files
-		count = r.LoadOne(svc.Books)
+		ebooks, n := r.LoadOne()
+		svc.Books.Update(ebooks)
+		count = n
 	}
 	endtime := time.Now()
 	log.Printf("book loading complete -- %d files read, %d books in dataset, took %s.\n", count, svc.Books.NBooks(), endtime.Sub(starttime).String())

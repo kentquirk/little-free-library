@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/kentquirk/little-free-library/pkg/rdf"
 )
 
 func loadTestData(books *BookData) {
@@ -51,19 +53,20 @@ func loadTestData(books *BookData) {
 	// now we have an uncompressed reader, we can start loading data from it
 	count := 0
 	starttime := time.Now()
-	r := NewLoader(rdr,
-		// We don't want to be delivering data that our users can't use, so we pre-filter the data that goes
-		// into the dataset. The target language(s) and target formats can be specified in the config, and
-		// only the data that meets these specifications will be saved.
-		EBookFilterOpt(LanguageFilter("en")),
-		PGFileFilterOpt(ContentFilter("plain_ascii")),
+	r := rdf.NewLoader(rdr,
+		rdf.EBookFilterOpt(rdf.LanguageFilter("en")),
+		rdf.PGFileFilterOpt(rdf.ContentFilter("plain_ascii")),
 	)
 
 	if strings.HasSuffix(resourcename, ".tar") {
-		count = r.LoadTar(books)
+		ebooks, n := r.LoadTar()
+		count = n
+		books.Update(ebooks)
 	} else {
 		// this is mainly useful for testing and debugging without waiting for big files
-		count = r.LoadOne(books)
+		ebooks, n := r.LoadOne()
+		count = n
+		books.Update(ebooks)
 	}
 	endtime := time.Now()
 	log.Printf("book loading complete -- %d files read, %d books in dataset, took %s.\n", count, len(books.books), endtime.Sub(starttime).String())

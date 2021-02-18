@@ -1,4 +1,4 @@
-package books
+package rdf
 
 import (
 	"archive/tar"
@@ -56,8 +56,15 @@ func LoadAtMostOpt(n int) LoaderOption {
 	}
 }
 
-// load is a helper function used by the Load functions
-func (r *Loader) load(rdr io.Reader) []booktypes.EBook {
+// UntarOpt returns a LoaderOptions that wraps the reader in a tar reader
+func UntarOpt(n int) LoaderOption {
+	return func(ldr *Loader) {
+		ldr.reader = tar.NewReader(ldr.reader)
+	}
+}
+
+// Load is a helper function used by the Load functions
+func (r *Loader) Load(rdr io.Reader) []booktypes.EBook {
 	var data xmlRdf
 	decoder := xml.NewDecoder(rdr)
 	if err := decoder.Decode(&data); err != nil {
@@ -96,17 +103,16 @@ func (r *Loader) load(rdr io.Reader) []booktypes.EBook {
 // It only returns the entities that pass the filters that have been set up
 // before calling load.
 // Returns 1 (the number of files processed).
-func (r *Loader) LoadOne(bookdata *BookData) int {
+func (r *Loader) LoadOne() ([]booktypes.EBook, int) {
 	// Go through the ebooks and keep the ones that pass the filter
-	ebooks := r.load(r.reader)
-	bookdata.Update(ebooks)
-	return 1
+	ebooks := r.Load(r.reader)
+	return ebooks, 1
 }
 
 // LoadTar loads from a reader, expecting the reader to be a tar file that contains lots of files of books
-// It returns the number of files that were processed within the tar, and replaces the bookdata's contents.
+// It returns a slide of EBooks and the number of files that were processed within the tar.
 // If loadOnly is set, it limits the number of items loaded. This is mainly useful for testing.
-func (r *Loader) LoadTar(bookdata *BookData) int {
+func (r *Loader) LoadTar() ([]booktypes.EBook, int) {
 	count := 0
 	tr := tar.NewReader(r.reader)
 	ebooks := make([]booktypes.EBook, 0)
@@ -118,14 +124,12 @@ func (r *Loader) LoadTar(bookdata *BookData) int {
 		if err != nil {
 			log.Fatalf("Count=%d, err=%v", count, err)
 		}
-		newtexts := r.load(tr)
+		newtexts := r.Load(tr)
 		ebooks = append(ebooks, newtexts...)
 		count++
 		if r.loadOnly > 0 && len(ebooks) >= r.loadOnly {
 			break // end early because loadOnly
 		}
 	}
-
-	bookdata.Update(ebooks)
-	return count
+	return ebooks, count
 }
