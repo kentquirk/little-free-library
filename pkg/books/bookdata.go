@@ -16,6 +16,18 @@ type BookData struct {
 	mu      sync.RWMutex
 	books   []booktypes.EBook
 	bookIDs map[string]int
+	stats   *StatsData
+}
+
+// StatsData is the data structure used to return collection-level information
+// about the data on hand.
+type StatsData struct {
+	TotalBooks   int            `json:"total_books"`
+	TotalFiles   int            `json:"total_files"`
+	AvgIndexSize float64        `json:"avg_index_size"`
+	Languages    map[string]int `json:"languages"`
+	Formats      map[string]int `json:"formats"`
+	Types        map[string]int `json:"types"`
 }
 
 // NewBookData constructs a BookData object
@@ -30,6 +42,7 @@ func (b *BookData) updateIDs(start int) {
 	for i := start; i < len(b.books); i++ {
 		b.bookIDs[b.books[i].ID] = i
 	}
+	b.stats = nil
 }
 
 // Add inserts one or more EBook entities into the BookData
@@ -67,21 +80,15 @@ func (b *BookData) Get(id string) (booktypes.EBook, bool) {
 	return booktypes.EBook{}, false
 }
 
-// StatsData is the data structure used to return collection-level information
-// about the data on hand.
-type StatsData struct {
-	TotalBooks   int            `json:"total_books"`
-	TotalFiles   int            `json:"total_files"`
-	AvgIndexSize float64        `json:"avg_index_size"`
-	Languages    map[string]int `json:"languages"`
-	Formats      map[string]int `json:"formats"`
-	Types        map[string]int `json:"types"`
-}
-
 // Stats returns aggregated information about the data being stored.
-func (b *BookData) Stats() StatsData {
+func (b *BookData) Stats() *StatsData {
+	// Stats don't change unless we update the books database, so return the cached
+	// version if it's already been done.
+	if b.stats != nil {
+		return b.stats
+	}
 	var totalWordsInIndex float64
-	sd := StatsData{
+	sd := &StatsData{
 		Languages: make(map[string]int),
 		Formats:   make(map[string]int),
 		Types:     make(map[string]int),
@@ -96,14 +103,17 @@ func (b *BookData) Stats() StatsData {
 		sd.Languages[lang]++
 		sd.Types[b.books[i].Type]++
 		for _, f := range b.books[i].Files {
-			for _, fmt := range f.Formats {
-				sd.TotalFiles++
-				sd.Formats[fmt]++
+			sd.TotalFiles++
+			fmt := f.Format
+			if f.Comp != booktypes.CompNone {
+				fmt += " (compressed)"
 			}
+			sd.Formats[fmt]++
 		}
 	}
 	sd.AvgIndexSize = totalWordsInIndex / float64(sd.TotalBooks)
-	return sd
+	b.stats = sd
+	return b.stats
 }
 
 // Query does a query against the book data according to a ConstraintSpec.

@@ -122,13 +122,13 @@ func (x *xmlEbook) asEBook() booktypes.EBook {
 }
 
 func (x *xmlFile) asFile() booktypes.PGFile {
-	f := booktypes.PGFile{
-		Location: x.About,
-		Formats:  x.Formats,
-		FileSize: x.Extent,
-		BookID:   x.IsFormatOf.Resource,
-		Modified: date.ParseOnly(x.Modified),
-	}
+	f := booktypes.BuildFile(
+		x.IsFormatOf.Resource,
+		x.About,
+		x.Formats,
+		x.Extent,
+		x.Modified,
+	)
 
 	return f
 }

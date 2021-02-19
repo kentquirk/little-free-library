@@ -25,6 +25,11 @@ build: clean
 race: build
 	go run -race cmd/${APP}/*.go
 
+.PHONY: run
+## run: runs the app
+run: build
+	go run cmd/${APP}/*.go
+
 .PHONY: install
 ## install: install the little free library
 install: clean

@@ -37,10 +37,8 @@ func ContentFilter(contentTypes ...string) PGFileFilter {
 	return func(f *booktypes.PGFile) bool {
 		for _, ctname := range contentTypes {
 			if ct, ok := ContentTypes[ctname]; ok {
-				for _, format := range f.Formats {
-					if strings.HasPrefix(format, ct) {
-						return true
-					}
+				if strings.HasPrefix(f.Format, ct) {
+					return true
 				}
 			}
 		}

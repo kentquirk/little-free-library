@@ -158,11 +158,9 @@ func testFormat(value string) ConstraintFunctor {
 	}
 	return func(eb booktypes.EBook) bool {
 		for ix := range eb.Files {
-			for _, fmt := range eb.Files[ix].Formats {
-				for _, wanted := range wantedFmts {
-					if fmt == wanted {
-						return true
-					}
+			for _, wanted := range wantedFmts {
+				if eb.Files[ix].Format == wanted {
+					return true
 				}
 			}
 		}
